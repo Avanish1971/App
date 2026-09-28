@@ -5,6 +5,7 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       node: latest
+      java: 21
     triggering:
       events:
         - push
@@ -18,8 +19,14 @@ workflows:
       - name: Capacitor Sync
         script: |
           npx cap sync android
-      - name: Build Android APK
+      - name: Grant execute permission for gradlew
         script: |
-          cd android && ./gradlew assembleRelease
+          chmod +x android/gradlew
+      - name: Generate Temporary Debug Keystore
+        script: |
+          keytool -genkey -v -keystore android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+      - name: Build and Sign Android APK
+        script: |
+          cd android && ./gradlew assembleDebug
     artifacts:
-      - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/apk/debug/*.apk

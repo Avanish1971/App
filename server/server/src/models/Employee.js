@@ -1,0 +1,35 @@
+const mongoose = require('mongoose');
+
+const EmployeeSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  empId: { type: String, required: true, unique: true },
+  fullName: { type: String, required: true },
+  email: String,
+  phone: String,
+  avatar: String,
+  department: String,
+  designation: String,
+  branch: String,
+  officeId: String,
+  shiftId: String,
+  reportingManager: String,
+  joiningDate: String,
+  status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+  employmentType: String,
+  workType: { type: String, enum: ['IN_OFFICE', 'FIELD_WORK'], default: 'IN_OFFICE' },
+  loginId: { type: String, unique: true, sparse: true },
+  password: String,
+  ctcAnnual: Number,
+  basicMonthly: Number,
+  hraMonthly: Number,
+  specialAllowanceMonthly: Number,
+  bankAccount: String,
+  ifsc: String,
+  pan: String,
+  uan: String,
+  currentLat: Number,
+  currentLng: Number,
+  accuracyMeters: Number,
+}, { timestamps: true, versionKey: false });
+
+module.exports = mongoose.model('Employee', EmployeeSchema);

@@ -1,0 +1,6 @@
+{
+  "name": "GeoAttend HRMS - Smart Geo-Fenced Attendance & Indian Payroll",
+  "description": "Enterprise Geo-Fenced Automatic Attendance, Shift Management, Leave Workflow, Indian Statutory Payroll & Commercial Sales Brochure Platform.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

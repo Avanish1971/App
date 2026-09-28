@@ -3,37 +3,28 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./db');
 
-const employeesRouter = require('./routes/employees');
-const officesRouter = require('./routes/offices');
-const shiftsRouter = require('./routes/shifts');
-const attendanceRouter = require('./routes/attendance');
-const leavesRouter = require('./routes/leaves');
-const regularizationsRouter = require('./routes/regularizations');
-const expensesRouter = require('./routes/expenses');
-const auditLogsRouter = require('./routes/auditLogs');
-const policyRouter = require('./routes/policy');
+// ... आपके बाकी सारे Routers यहाँ रहेंगे ...
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
+// 🔴 पुराना CORS हटाकर इसे हर जगह से (मोबाइल ऐप सहित) रिक्वेस्ट स्वीकार करने के लिए बदलें
+app.use(cors({ 
+  origin: '*', // यह आपके मोबाइल ऐप को कनेक्शन की अनुमति देगा
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API running' }));
 
-app.use('/api/employees', employeesRouter);
-app.use('/api/offices', officesRouter);
-app.use('/api/shifts', shiftsRouter);
-app.use('/api/attendance', attendanceRouter);
-app.use('/api/leaves', leavesRouter);
-app.use('/api/regularizations', regularizationsRouter);
-app.use('/api/expenses', expensesRouter);
-app.use('/api/audit-logs', auditLogsRouter);
-app.use('/api/policy', policyRouter);
+// ... आपके app.use('/api/...') वाले सारे रूट्स यहाँ रहेंगे ...
 
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
+  // 🔴 '0.0.0.0' जोड़ने से आपका लैपटॉप लोकल वाई-फाई नेटवर्क पर सर्वर को लाइव कर देगा
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on local network at http://10.79.240.108:${PORT}`);
   });
 });

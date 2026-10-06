@@ -59,7 +59,7 @@ export function MobileAppSimulator({
   const [userLat] = useState<number>(19.06572);
   const [userLng] = useState<number>(72.86874);
   const [accuracy] = useState<number>(12);
-  const [isMock] = useState<boolean>(false);
+  const [isMock] = useState<boolean>(true);
 
   // Modals
   const [showPayslip, setShowPayslip] = useState(false);

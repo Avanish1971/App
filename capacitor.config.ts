@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Attendance_app',
   webDir: 'dist',
   server: {
-    // 🚀 यह लाइन ऐप को सीधे तुम्हारे लाइव AWS सर्वर पर पॉइंट करेगी
-    url: 'http://54.253.216.68:5000',
+    // 🚀 यहाँ पोर्ट 3000 होना चाहिए ताकि मोबाइल ऐप सीधे लाइव एडमिन वेबसाइट का लेआउट लोड करे
+    url: 'http://54.253.216.68:3000',
     cleartext: true,
     androidScheme: 'http'
   }

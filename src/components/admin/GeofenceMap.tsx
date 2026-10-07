@@ -19,7 +19,7 @@ export function GeofenceMap({
   const [selectedOfficeId, setSelectedOfficeId] = useState<string>(offices && offices.length > 0 ? offices[0].id : '');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
-  const activeOffice = offices.find((o) => o.id === selectedOfficeId) || offices[0];
+  const activeOffice = offices.find((o) => o.id === selectedOfficeId) || offices[0] || { name: 'Loading...', city: '', radiusMeters: 100, latitude: 0, longitude: 0 };
   const officeEmployees = employees.filter((e) => e.officeId === activeOffice.id);
 
   const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);

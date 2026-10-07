@@ -345,12 +345,12 @@ export function AdminDashboard({
           />
         )}
 
-        {activeTab === 'payroll' && (
+        {/* {activeTab === 'payroll' && (
           <PayrollModule
             payrollRun={payrollRun}
             onLockPayroll={onLockPayroll}
           />
-        )}
+        )} */}
 
         {activeTab === 'policy' && (
           <ShiftPolicySettings

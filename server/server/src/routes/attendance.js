@@ -33,9 +33,9 @@
 
 const express = require('express');
 const router = express.Router();
-const AttendanceRecord = require('../models/AttendanceRecord'); // आपके मॉडल का नाम
+const AttendanceRecord = require('../models/AttendanceRecord');
 
-// 🔴 सबसे ज़रूरी चेक: रास्ता केवल '/' होना चाहिए, '/api/attendance' नहीं!
+// 🔴 बिल्कुल पक्का कर लें: यहाँ केवल '/' होना चाहिए, '/api/attendance' नहीं!
 router.get('/', async (req, res) => {
   try {
     const records = await AttendanceRecord.find();

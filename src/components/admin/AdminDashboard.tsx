@@ -131,15 +131,12 @@ export function AdminDashboard({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-              Inno
+              Innovate Soft
             </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">
             Workforce Attendance & HR Operations
           </h2>
-          <p className="text-xs text-slate-500">
-            Headquarters: Mumbai (BKC) · Campuses: Pune (Hinjewadi) & New Delhi (CP)
-          </p>
         </div>
 
         <div className="flex items-center gap-3">

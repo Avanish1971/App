@@ -11,9 +11,9 @@
 
 const express = require('express');
 const router = express.Router();
-const Shift = require('../models/Shift'); // आपका शिफ्ट मॉडल
+const Shift = require('../models/Shift');
 
-// 🔴 सबसे ज़रूरी चेक: रास्ता केवल '/' होना चाहिए, '/api/shifts' नहीं!
+// 🔴 बिल्कुल पक्का कर लें: यहाँ केवल '/' होना चाहिए, '/api/shifts' नहीं!
 router.get('/', async (req, res) => {
   try {
     const shifts = await Shift.find();
@@ -23,4 +23,5 @@ router.get('/', async (req, res) => {
   }
 });
 
+module.exports = router;
 module.exports = router;

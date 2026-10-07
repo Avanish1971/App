@@ -13,7 +13,7 @@ import {
   AttendancePolicy,
 } from '../types';
 
-const BASE_URL = 'http://54.253.216.68:5000';
+const BASE_URL = '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

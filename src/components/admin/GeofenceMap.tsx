@@ -16,7 +16,7 @@ export function GeofenceMap({
   attendanceRecords,
   onUpdateOfficeRadius,
 }: GeofenceMapProps) {
-  const [selectedOfficeId, setSelectedOfficeId] = useState<string>(offices[0].id);
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>(offices && offices.length > 0 ? offices[0].id : '');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
   const activeOffice = offices.find((o) => o.id === selectedOfficeId) || offices[0];

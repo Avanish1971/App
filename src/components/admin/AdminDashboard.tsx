@@ -131,7 +131,7 @@ export function AdminDashboard({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-              Acme Technologies Pvt Ltd · Enterprise Console
+              Inno
             </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">

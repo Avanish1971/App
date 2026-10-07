@@ -23,9 +23,9 @@
 
 const express = require('express');
 const router = express.Router();
-const Office = require('../models/Office');
+const Office = require('../models/Office'); // आपके मॉडल का नाम
 
-// 🔴 CRUCIAL CHECK: The route must be just '/'
+// 🔴 बिल्कुल पक्का कर लें: यहाँ केवल '/' होना चाहिए, '/api/offices' नहीं!
 router.get('/', async (req, res) => {
   try {
     const offices = await Office.find();

@@ -5,10 +5,16 @@ const config: CapacitorConfig = {
   appName: 'Attendance_app',
   webDir: 'dist',
   server: {
-    // 🚀 यहाँ पोर्ट 3000 होना चाहिए ताकि मोबाइल ऐप सीधे लाइव एडमिन वेबसाइट का लेआउट लोड करे
+    // 🚀 Yeh aapke live production server ko point karega
     url: 'http://54.253.216.68:3000',
     cleartext: true,
-    androidScheme: 'http'
+    // 🔴 CRUCIAL FIX: androidScheme ko 'https' rakhna zaroori hai native proxy bypass ke liye
+    androidScheme: 'https',
+    allowNavigation: [
+      '54.253.216.68:3000',
+      '54.253.216.68:5000',
+      '*.54.253.216.68'
+    ]
   }
 };
 

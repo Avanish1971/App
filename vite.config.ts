@@ -23,19 +23,13 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react()],
+  // tailwindcss() plugin zaroori hai, nahi toh CSS classes compile nahi hoti
+  plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
     host: true,
-    proxy: {
-      // 🚀 यह प्रॉक्सी ब्राउज़र की 'Failed to fetch' वाली एरर को हमेशा के लिए खत्म कर देगी
-      '/api': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
-  }
+  },
 });

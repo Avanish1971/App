@@ -5,17 +5,12 @@ const config: CapacitorConfig = {
   appName: 'Attendance_app',
   webDir: 'dist',
   server: {
-    // 🚀 Yeh aapke live production server ko point karega
-    url: 'http://54.253.216.68:3000',
+    androidScheme: 'http',
     cleartext: true,
-    // 🔴 CRUCIAL FIX: androidScheme ko 'https' rakhna zaroori hai native proxy bypass ke liye
-    androidScheme: 'https',
-    allowNavigation: [
-      '54.253.216.68:3000',
-      '54.253.216.68:5000',
-      '*.54.253.216.68'
-    ]
-  }
+  },
+  android: {
+    allowMixedContent: true,
+  },
 };
 
 export default config;

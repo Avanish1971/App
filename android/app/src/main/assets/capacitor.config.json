@@ -1,0 +1,12 @@
+{
+	"appId": "com.geoattend.hrms",
+	"appName": "Attendance_app",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "http",
+		"cleartext": true
+	},
+	"android": {
+		"allowMixedContent": true
+	}
+}

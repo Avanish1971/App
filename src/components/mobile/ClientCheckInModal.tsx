@@ -46,22 +46,22 @@ export function ClientCheckInModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white border border-slate-300 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/90">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan-600/20 text-cyan-400 flex items-center justify-center font-bold">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
               <Briefcase className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">क्लाइंट विजिट / फील्ड वर्क चेक-इन</h3>
-              <p className="text-[11px] text-slate-400">On-Duty Client Location Attendance</p>
+              <h3 className="font-bold text-slate-900 text-sm">क्लाइंट विजिट / फील्ड वर्क चेक-इन</h3>
+              <p className="text-[11px] text-slate-500">On-Duty Client Location Attendance</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+            className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100"
           >
             <X className="w-4 h-4" />
           </button>
@@ -69,13 +69,13 @@ export function ClientCheckInModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
           {/* Official Field Staff Policy Banner */}
-          <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3 text-emerald-300 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-700 flex items-start gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <div className="space-y-0.5 leading-relaxed text-[11px]">
-              <div className="font-bold text-emerald-300">
+              <div className="font-bold text-emerald-700">
                 फील्ड स्टाफ गारंटी: गैरहाजिरी नहीं लगेगी!
               </div>
-              <div className="text-emerald-400/90">
+              <div className="text-emerald-600">
                 चूंकि आप अधिकृत फील्ड वर्क कर्मचारी हैं, क्लाइंट लोकेशन पर चेक-इन करने पर आपकी अटेंडेंस <strong>PRESENT (On-Duty)</strong> दर्ज होगी और पेरोल में कोई कटौती नहीं होगी।
               </div>
             </div>
@@ -83,41 +83,41 @@ export function ClientCheckInModal({
 
           {/* Form Fields */}
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
+            <label className="block text-slate-700 font-medium mb-1">
               क्लाइंट या कंपनी का नाम (Client / Company Name) *
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Reliance Retail, HDFC Bank, Tata Motors"
-                className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 font-medium"
+                className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 font-medium"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
+            <label className="block text-slate-700 font-medium mb-1">
               क्लाइंट का पता / लोकेशन (Client Address / Location) *
             </label>
             <div className="relative">
-              <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 value={clientLocation}
                 onChange={(e) => setClientLocation(e.target.value)}
                 placeholder="e.g. BKC Commercial Hub, Mumbai"
-                className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+                className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
+            <label className="block text-slate-700 font-medium mb-1">
               मीटिंग / काम का उद्देश्य (Purpose of Visit / Remarks)
             </label>
             <textarea
@@ -125,20 +125,20 @@ export function ClientCheckInModal({
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Enterprise software demo, onsite hardware inspection, client requirements review..."
               rows={2}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-cyan-500 placeholder:text-slate-500"
+              className="w-full bg-slate-100 border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
             />
           </div>
 
           {/* Captured GPS Telemetry Box */}
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1">
-            <div className="flex items-center justify-between text-slate-400">
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1">
+            <div className="flex items-center justify-between text-slate-500">
               <span className="flex items-center gap-1">
-                <Navigation className="w-3.5 h-3.5 text-cyan-400" />
+                <Navigation className="w-3.5 h-3.5 text-blue-600" />
                 <span>लाइव GPS जियो-लोकेशन (Auto-Captured):</span>
               </span>
-              <span className="font-mono text-emerald-400 font-semibold">✓ Verified GPS</span>
+              <span className="font-mono text-emerald-600 font-semibold">✓ Verified GPS</span>
             </div>
-            <div className="font-mono text-slate-300 flex justify-between">
+            <div className="font-mono text-slate-700 flex justify-between">
               <span>Lat: {currentLat.toFixed(5)}°, Lng: {currentLng.toFixed(5)}°</span>
               <span>Accuracy: ±{Math.round(accuracy)}m</span>
             </div>
@@ -149,14 +149,14 @@ export function ClientCheckInModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl font-medium"
+              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-100 text-slate-700 rounded-xl font-medium"
             >
               रद्द करें (Cancel)
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/30 transition-all"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all"
             >
               {submitting ? (
                 <span>वेरिफाई हो रहा है...</span>

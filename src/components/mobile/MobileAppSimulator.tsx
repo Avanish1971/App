@@ -223,14 +223,14 @@ export function MobileAppSimulator({
   return (
     <div className="flex-1 bg-gradient-to-b from-blue-50 via-white to-slate-50 min-h-screen flex flex-col relative text-slate-800 font-sans antialiased">
       {/* Real Mobile Top Bar Status look */}
-      <div className="pt-3 px-6 pb-2 flex justify-between items-center text-[11px] text-slate-500 font-mono select-none">
+      {/* <div className="pt-3 px-6 pb-2 flex justify-between items-center text-[11px] text-slate-500 font-mono select-none">
         <div className="flex items-center gap-1.5">
           {isOffline ? <WifiOff className="w-3 h-3 text-amber-500" /> : <Wifi className="w-3 h-3 text-emerald-500" />}
           <div className="w-4 h-2 rounded-sm border border-slate-400 flex items-center p-0.5">
             <div className="w-2.5 h-full bg-emerald-500 rounded-xs" />
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Main Full Screen Viewport Area */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3.5 pb-24 text-xs">

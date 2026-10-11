@@ -36,6 +36,7 @@ import {
 } from './types';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MobileAppSimulator } from './components/mobile/MobileAppSimulator';
+import { UpdateBanner } from './components/UpdateBanner.tsx';
 import { ShieldCheck } from 'lucide-react';
 
 // Web (browser) ke liye default 'admin' hai. Native APK (Capacitor Android build)
@@ -316,6 +317,8 @@ export default function App() {
     if (!currentOffice || !currentPayrollItem) return null;
 
     return (
+      <>
+      <UpdateBanner />
       <MobileAppSimulator
         employee={currentEmployee}
         employees={employees}
@@ -328,12 +331,14 @@ export default function App() {
         onApplyLeave={handleApplyLeaveMobile}
         onApplyRegularization={handleApplyRegularizationMobile}
       />
+      </>
     );
   }
 
   // ---- ADMIN VIEW (default, web) ----
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-slate-50 text-slate-800 flex flex-col font-sans">
+      <UpdateBanner />
       {/* Locked Clean Web Header - No Mode Switchers / No Simulators */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">

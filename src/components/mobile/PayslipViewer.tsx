@@ -63,14 +63,6 @@ export function PayslipViewer({ payrollItem, onClose }: PayslipViewerProps) {
         <div className="p-6 overflow-y-auto space-y-6 text-slate-800 text-xs">
           {/* Company & Employee Lockup */}
           <div className="border-b border-slate-200 pb-5 flex flex-wrap justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Building className="w-4 h-4 text-blue-600" />
-                <span className="font-bold text-slate-900 text-base">Acme Technologies Pvt. Ltd.</span>
-              </div>
-              <p className="text-slate-500 mt-1">Maker Maxity, Bandra Kurla Complex (BKC), Mumbai - 400051</p>
-              <p className="text-slate-500">CIN: U72200MH2021PTC123456 | GSTIN: 27AABCA1234F1Z8</p>
-            </div>
             <div className="text-right">
               <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                 ✓ ELECTRONICALLY VERIFIED

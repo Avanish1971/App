@@ -1,5 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// APK AWS wali web ko kholega. Isliye AWS par update karne se app me update aayega.
 const config: CapacitorConfig = {
   appId: 'com.geoattend.hrms',
   appName: 'Attendance_app',
@@ -13,3 +14,5 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
   },
 };
+
+export default config;

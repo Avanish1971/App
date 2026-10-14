@@ -46,22 +46,22 @@ export function ClientCheckInModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-300 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-full bg-white/25 text-white flex items-center justify-center font-bold">
               <Briefcase className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">क्लाइंट विजिट / फील्ड वर्क चेक-इन</h3>
-              <p className="text-[11px] text-slate-500">On-Duty Client Location Attendance</p>
+              <h3 className="font-bold text-white text-sm">क्लाइंट विजिट / फील्ड वर्क चेक-इन</h3>
+              <p className="text-[11px] text-blue-50">On-Duty Client Location Attendance</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100"
+            className="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-white/20"
           >
             <X className="w-4 h-4" />
           </button>
@@ -87,13 +87,13 @@ export function ClientCheckInModal({
               क्लाइंट या कंपनी का नाम (Client / Company Name) *
             </label>
             <div className="relative">
-              <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
               <input
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Reliance Retail, HDFC Bank, Tata Motors"
-                className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 font-medium"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 font-medium"
                 required
               />
             </div>
@@ -104,13 +104,13 @@ export function ClientCheckInModal({
               क्लाइंट का पता / लोकेशन (Client Address / Location) *
             </label>
             <div className="relative">
-              <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
               <input
                 type="text"
                 value={clientLocation}
                 onChange={(e) => setClientLocation(e.target.value)}
                 placeholder="e.g. BKC Commercial Hub, Mumbai"
-                className="w-full pl-9 pr-3 py-2 bg-slate-100 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-blue-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500"
                 required
               />
             </div>
@@ -125,12 +125,12 @@ export function ClientCheckInModal({
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Enterprise software demo, onsite hardware inspection, client requirements review..."
               rows={2}
-              className="w-full bg-slate-100 border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+              className="w-full bg-white border border-blue-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
             />
           </div>
 
           {/* Captured GPS Telemetry Box */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] space-y-1">
+          <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-[11px] space-y-1">
             <div className="flex items-center justify-between text-slate-500">
               <span className="flex items-center gap-1">
                 <Navigation className="w-3.5 h-3.5 text-blue-600" />
@@ -149,14 +149,14 @@ export function ClientCheckInModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-100 text-slate-700 rounded-xl font-medium"
+              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium"
             >
               रद्द करें (Cancel)
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all"
+              className="flex-1 py-2.5 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 hover:opacity-90 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-teal-500/30 transition-all"
             >
               {submitting ? (
                 <span>वेरिफाई हो रहा है...</span>

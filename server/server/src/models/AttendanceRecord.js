@@ -44,6 +44,13 @@ const AttendanceRecordSchema = new mongoose.Schema({
   isEarlyExit: { type: Boolean, default: false },
   source: { type: String, enum: ['AUTO_GEOFENCE', 'MANUAL', 'ADMIN'], default: 'MANUAL' },
   verificationStatus: { type: String, enum: ['VERIFIED', 'PENDING'], default: 'PENDING' },
+  // Geofence tracking (server khud bharta hai)
+  outsideSince: Date,
+  lastPingAt: Date,
+  lastLat: Number,
+  lastLng: Number,
+  lastDistanceMeters: Number,
+  insideGeofence: Boolean,
   clientVisit: ClientVisitSchema,
   events: [AttendanceEventSchema],
 }, { timestamps: true, versionKey: false });

@@ -102,6 +102,13 @@ export interface AttendanceRecord {
   source: AttendanceSource;
   verificationStatus: 'VERIFIED' | 'FLAGGED_REVIEW' | 'PENDING' | 'REJECTED';
   flagReason?: string;
+  // Geofence tracking (server bharta hai)
+  outsideSince?: string;
+  lastPingAt?: string;
+  lastLat?: number;
+  lastLng?: number;
+  lastDistanceMeters?: number;
+  insideGeofence?: boolean;
   clientVisit?: {
     clientName: string;
     clientLocation: string;

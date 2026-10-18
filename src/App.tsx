@@ -7,6 +7,9 @@ import {
   updateEmployeeStatusApi,
   getOffices,
   updateOfficeRadiusApi,
+  addOfficeApi,
+  updateOfficeApi,
+  deleteOfficeApi,
   getShifts,
   getAttendance,
   updateAttendanceTodayApi,
@@ -22,6 +25,7 @@ import {
   getPolicy,
   savePolicyApi,
 } from './lib/api';
+import type { OfficeInput } from './lib/api';
 import {
   Office,
   Shift,
@@ -37,6 +41,8 @@ import {
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MobileAppSimulator } from './components/mobile/MobileAppSimulator';
 import { UpdateBanner } from './components/UpdateBanner.tsx';
+import { useGeofenceTracking } from './components/mobile/useGeofenceTracking';
+import { calculateIndianPayrollItem } from './utils/payroll';
 import { ShieldCheck } from 'lucide-react';
 
 // Web (browser) ke liye default 'admin' hai. Native APK (Capacitor Android build)
@@ -49,7 +55,8 @@ function getViewFromUrl(): 'admin' | 'mobile' {
   return params.get('view') === 'mobile' ? 'mobile' : 'admin';
 }
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// Server bhi India (IST) ki date use karta hai, isliye yahan bhi IST
+const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
 function buildBlankAttendance(employeeId: string, officeId: string, shiftId: string): AttendanceRecord {
   return {
@@ -92,6 +99,20 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Mobile: phone ki live location se aaya attendance record state me daalo
+  const handleLiveRecord = (record: AttendanceRecord) => {
+    setAttendanceRecords((prev) => {
+      const exists = prev.some((a) => a.employeeId === record.employeeId && a.date === record.date);
+      return exists
+        ? prev.map((a) => (a.employeeId === record.employeeId && a.date === record.date ? record : a))
+        : [...prev, record];
+    });
+  };
+  const { position: livePosition, status: locationStatus } = useGeofenceTracking(
+    activeView === 'mobile' && !isLoading && !loadError ? mobileEmployeeId : null,
+    handleLiveRecord
+  );
 
   // Fetch everything from the backend once, when the app first loads.
   useEffect(() => {
@@ -146,6 +167,21 @@ export default function App() {
 
     loadAll();
   }, []);
+
+  // Admin screen: har 30 second me attendance aur employees ki location taaza karo
+  useEffect(() => {
+    if (activeView !== 'admin' || isLoading || loadError) return;
+    const timer = setInterval(async () => {
+      try {
+        const [att, emps] = await Promise.all([getAttendance(), getEmployees()]);
+        setAttendanceRecords(att);
+        setEmployees(emps);
+      } catch {
+        // network atka to agli baar phir koshish hogi
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [activeView, isLoading, loadError]);
 
   // ---- Admin actions — each one now calls the backend, then updates local state ----
 
@@ -227,6 +263,23 @@ export default function App() {
     } catch (err) {
       console.error('Failed to update employee status:', err);
     }
+  };
+
+  // ---- Office locations (admin) ----
+
+  const handleAddOffice = async (data: OfficeInput) => {
+    const created = await addOfficeApi(data);
+    setOffices((prev) => [...prev, created]);
+  };
+
+  const handleUpdateOffice = async (id: string, data: OfficeInput) => {
+    const updated = await updateOfficeApi(id, data);
+    setOffices((prev) => prev.map((o) => (o.id === id ? updated : o)));
+  };
+
+  const handleDeleteOffice = async (id: string) => {
+    await deleteOfficeApi(id);
+    setOffices((prev) => prev.filter((o) => o.id !== id));
   };
 
   // ---- Mobile actions — check-in/break/client-visit, leave apply, regularization apply ----
@@ -312,7 +365,28 @@ export default function App() {
       attendanceRecords.find(
         (a) => a.employeeId === currentEmployee.id && a.date === todayStr()
       ) || buildBlankAttendance(currentEmployee.id, currentEmployee.officeId, currentEmployee.shiftId);
-    const currentPayrollItem = payrollRun.items.find((i) => i.employeeId === currentEmployee.id);
+    // Naye employee ka payroll item seed me nahi hota, isliye zaroorat par abhi bana lo
+    const currentPayrollItem =
+      payrollRun.items.find((i) => i.employeeId === currentEmployee.id) ||
+      calculateIndianPayrollItem(
+        currentEmployee.id,
+        currentEmployee.fullName,
+        currentEmployee.department,
+        currentEmployee.designation,
+        currentEmployee.pan,
+        currentEmployee.bankAccount,
+        {
+          grossMonthly:
+            (currentEmployee.basicMonthly || 0) +
+            (currentEmployee.hraMonthly || 0) +
+            (currentEmployee.specialAllowanceMonthly || 0),
+          workingDays: 26,
+          presentDays: 26,
+          paidLeaveDays: 0,
+          lopDays: 0,
+          overtimeHours: 0,
+        }
+      );
 
     if (!currentOffice || !currentPayrollItem) return null;
 
@@ -325,6 +399,8 @@ export default function App() {
         office={currentOffice}
         attendance={currentAttendance}
         payrollItem={currentPayrollItem}
+        livePosition={livePosition}
+        locationStatus={locationStatus}
         leaves={leaves.filter((l) => l.employeeId === currentEmployee.id)}
         onSelectEmployee={(empId) => setMobileEmployeeId(empId)}
         onUpdateAttendance={handleUpdateAttendance}
@@ -378,6 +454,9 @@ export default function App() {
           policy={policy}
           auditLogs={auditLogs}
           onUpdateOfficeRadius={handleUpdateOfficeRadius}
+          onAddOffice={handleAddOffice}
+          onUpdateOffice={handleUpdateOffice}
+          onDeleteOffice={handleDeleteOffice}
           onActionLeave={handleActionLeave}
           onActionRegularization={handleActionRegularization}
           onActionExpense={handleActionExpense}

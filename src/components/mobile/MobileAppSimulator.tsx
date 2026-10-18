@@ -42,6 +42,9 @@ interface MobileAppSimulatorProps {
   onUpdateAttendance: (newRecord: AttendanceRecord) => void;
   onApplyLeave: (leave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => void;
   onApplyRegularization: (reg: Omit<RegularizationRequest, 'id' | 'appliedAt' | 'status'>) => void;
+  // Phone ki live GPS location (None ho to abhi location nahi mili)
+  livePosition?: { latitude: number; longitude: number; accuracy: number } | null;
+  locationStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
 }
 
 export function MobileAppSimulator({
@@ -55,11 +58,15 @@ export function MobileAppSimulator({
   onUpdateAttendance,
   onApplyLeave,
   onApplyRegularization,
+  livePosition,
+  locationStatus,
 }: MobileAppSimulatorProps) {
-  const [userLat] = useState<number>(19.06572);
-  const [userLng] = useState<number>(72.86874);
-  const [accuracy] = useState<number>(12);
-  const [isMock] = useState<boolean>(true);
+  // Ab location asli GPS se aati hai. GPS nahi mila to hasFix = false.
+  const hasFix = !!livePosition;
+  const userLat = livePosition ? livePosition.latitude : office.latitude;
+  const userLng = livePosition ? livePosition.longitude : office.longitude;
+  const accuracy = livePosition ? livePosition.accuracy : 0;
+  const isMock = false;
 
   // Modals
   const [showPayslip, setShowPayslip] = useState(false);
@@ -75,6 +82,13 @@ export function MobileAppSimulator({
 
   // Break timer state
   const [breakTimerSeconds, setBreakTimerSeconds] = useState(0);
+
+  const locationMessage =
+    locationStatus === 'denied'
+      ? 'Location permission band hai. Phone Settings me is app ko Location allow karo.'
+      : locationStatus === 'unavailable'
+        ? 'GPS available nahi hai. Location (GPS) ON karo.'
+        : 'Thodi der ruko, aapki location dhoondh rahe hain…';
 
   // Geofence check
   const geoResult = validateGeofence(userLat, userLng, accuracy, office.latitude, office.longitude, office.radiusMeters, 50, isMock);
@@ -95,13 +109,13 @@ export function MobileAppSimulator({
     const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const newRecord: AttendanceRecord = {
       ...attendance,
-      status: geoResult.isInside ? 'PRESENT' : 'WFH',
+      status: hasFix && geoResult.isInside ? 'PRESENT' : 'WFH',
       checkInTime: nowTime,
       checkInLat: userLat,
       checkInLng: userLng,
       checkInAccuracy: accuracy,
-      source: geoResult.isInside ? 'AUTO_GEOFENCE' : 'MANUAL',
-      verificationStatus: geoResult.isInside ? 'VERIFIED' : 'PENDING',
+      source: hasFix && geoResult.isInside ? 'AUTO_GEOFENCE' : 'MANUAL',
+      verificationStatus: hasFix && geoResult.isInside ? 'VERIFIED' : 'PENDING',
       events: [
         ...attendance.events,
         {
@@ -261,13 +275,13 @@ export function MobileAppSimulator({
               <Building className="w-3.5 h-3.5" />
               <span>{office.name}</span>
             </div>
-            <span className="text-[10px] text-slate-500 font-mono">10:00 AM - 06:00 PM</span>
+            <span className="text-[10px] text-slate-500 font-mono">{office.workingHours || ''}</span>
           </div>
-          <div className={`p-2.5 rounded-xl border text-[11px] flex items-start gap-2 ${geoResult.verdict === 'VERIFIED' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+          <div className={`p-2.5 rounded-xl border text-[11px] flex items-start gap-2 ${hasFix && geoResult.verdict === 'VERIFIED' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
             <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold">Location Verified Inside Geofence</div>
-              <div className="text-[10px] text-slate-600 opacity-90">{geoResult.message}</div>
+              <div className="font-bold">{!hasFix ? 'Location detect ho rahi hai…' : geoResult.isInside ? 'Location Verified Inside Geofence' : 'Office geofence ke bahar'}</div>
+              <div className="text-[10px] text-slate-600 opacity-90">{hasFix ? geoResult.message : locationMessage}</div>
             </div>
           </div>
         </div>

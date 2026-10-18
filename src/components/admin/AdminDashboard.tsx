@@ -12,6 +12,8 @@ import {
   AuditLogEntry,
 } from '../../types';
 import { GeofenceMap } from './GeofenceMap';
+import { OfficeLocations } from './OfficeLocations';
+import type { OfficeInput } from '../../lib/api';
 import { AttendanceRoster } from './AttendanceRoster';
 import { ApprovalCenter } from './ApprovalCenter';
 // import { PayrollModule } from './PayrollModule';
@@ -54,6 +56,9 @@ interface AdminDashboardProps {
   policy: AttendancePolicy;
   auditLogs: AuditLogEntry[];
   onUpdateOfficeRadius: (officeId: string, newRadius: number) => void;
+  onAddOffice: (data: OfficeInput) => Promise<void>;
+  onUpdateOffice: (id: string, data: OfficeInput) => Promise<void>;
+  onDeleteOffice: (id: string) => Promise<void>;
   onActionLeave: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onActionRegularization: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onActionExpense: (id: string, action: 'APPROVED' | 'REJECTED') => void;
@@ -75,6 +80,9 @@ export function AdminDashboard({
   policy,
   auditLogs,
   onUpdateOfficeRadius,
+  onAddOffice,
+  onUpdateOffice,
+  onDeleteOffice,
   onActionLeave,
   onActionRegularization,
   onActionExpense,
@@ -85,7 +93,7 @@ export function AdminDashboard({
 }: AdminDashboardProps) {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(true);
   const [showDeploymentGuide, setShowDeploymentGuide] = useState(false);
-  const [activeTab, setActiveTab] = useState<'map' | 'roster' | 'approvals' | 'payroll' | 'policy' | 'audit'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'locations' | 'roster' | 'approvals' | 'payroll' | 'policy' | 'audit'>('map');
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [inspectAuditEmployee, setInspectAuditEmployee] = useState<{
     employee: Employee;
@@ -246,6 +254,18 @@ export function AdminDashboard({
         </button>
 
         <button
+          onClick={() => setActiveTab('locations')}
+          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
+            activeTab === 'locations'
+              ? 'border-indigo-500 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <MapPin className="w-4 h-4 text-indigo-600" />
+          <span>Office Locations</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('roster')}
           className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
             activeTab === 'roster'
@@ -319,6 +339,16 @@ export function AdminDashboard({
             employees={employees}
             attendanceRecords={attendanceRecords}
             onUpdateOfficeRadius={onUpdateOfficeRadius}
+          />
+        )}
+
+        {activeTab === 'locations' && (
+          <OfficeLocations
+            offices={offices}
+            employees={employees}
+            onAddOffice={onAddOffice}
+            onUpdateOffice={onUpdateOffice}
+            onDeleteOffice={onDeleteOffice}
           />
         )}
 

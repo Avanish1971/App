@@ -12,6 +12,7 @@ const regularizationsRouter = require('./routes/regularizations');
 const expensesRouter = require('./routes/expenses');
 const auditLogsRouter = require('./routes/auditLogs');
 const policyRouter = require('./routes/policy');
+const { startSweeper } = require('./utils/geofence');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/policy', policyRouter);
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
+  startSweeper();
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
   });

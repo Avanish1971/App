@@ -20,8 +20,6 @@ import { ApprovalCenter } from './ApprovalCenter';
 import { ShiftPolicySettings } from './ShiftPolicySettings';
 import { AuditLogViewer } from './AuditLogViewer';
 import { AddEmployeeModal } from './AddEmployeeModal';
-import { DeploymentGuideModal } from './DeploymentGuideModal';
-import { AdminLoginGate } from './AdminLoginGate';
 import {
   Users,
   CheckCircle2,
@@ -58,7 +56,7 @@ interface AdminDashboardProps {
   onUpdateOfficeRadius: (officeId: string, newRadius: number) => void;
   onAddOffice: (data: OfficeInput) => Promise<void>;
   onUpdateOffice: (id: string, data: OfficeInput) => Promise<void>;
-  onDeleteOffice: (id: string) => Promise<void>;
+  onDeleteOffice: (id: string, moveToOfficeId?: string) => Promise<void>;
   onActionLeave: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onActionRegularization: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onActionExpense: (id: string, action: 'APPROVED' | 'REJECTED') => void;
@@ -66,6 +64,8 @@ interface AdminDashboardProps {
   onSavePolicy: (newPolicy: AttendancePolicy) => void;
   onAddEmployee: (newEmployee: Employee) => void;
   onToggleEmployeeStatus: (employeeId: string, newStatus: 'ACTIVE' | 'INACTIVE', reason?: string) => void;
+  onDeleteEmployee: (employeeId: string, confirmEmpId: string) => Promise<void>;
+  onLogout: () => void;
 }
 
 export function AdminDashboard({
@@ -90,30 +90,15 @@ export function AdminDashboard({
   onSavePolicy,
   onAddEmployee,
   onToggleEmployeeStatus,
+  onDeleteEmployee,
+  onLogout,
 }: AdminDashboardProps) {
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(true);
-  const [showDeploymentGuide, setShowDeploymentGuide] = useState(false);
   const [activeTab, setActiveTab] = useState<'map' | 'locations' | 'roster' | 'approvals' | 'payroll' | 'policy' | 'audit'>('map');
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [inspectAuditEmployee, setInspectAuditEmployee] = useState<{
     employee: Employee;
     record?: AttendanceRecord;
   } | null>(null);
-
-  // If Admin is logged out, show official secure Admin Login Gate
-  if (!isAdminLoggedIn) {
-    return (
-      <>
-        <AdminLoginGate
-          onAdminLoginSuccess={() => setIsAdminLoggedIn(true)}
-          onOpenDeploymentGuide={() => setShowDeploymentGuide(true)}
-        />
-        {showDeploymentGuide && (
-          <DeploymentGuideModal onClose={() => setShowDeploymentGuide(false)} />
-        )}
-      </>
-    );
-  }
 
   // Metrics — sab live data (employees/attendanceRecords/offices) se calculate hote hain
   const totalEmployees = employees.filter((e) => e.status === 'ACTIVE').length;
@@ -157,7 +142,7 @@ export function AdminDashboard({
           </div>
 
           <button
-            onClick={() => setIsAdminLoggedIn(false)}
+            onClick={onLogout}
             title="Admin Logout / Lock Portal"
             className="p-2 bg-slate-100 hover:bg-slate-100 text-slate-500 hover:text-rose-700 rounded-xl border border-slate-300 transition-colors"
           >
@@ -361,6 +346,7 @@ export function AdminDashboard({
             onOpenAddEmployee={() => setShowAddEmployeeModal(true)}
             onViewEmployeeAudit={(emp, rec) => setInspectAuditEmployee({ employee: emp, record: rec })}
             onToggleEmployeeStatus={onToggleEmployeeStatus}
+            onDeleteEmployee={onDeleteEmployee}
           />
         )}
 
@@ -445,7 +431,7 @@ export function AdminDashboard({
                 <span className="text-slate-500 mx-2">|</span>
                 <span className="text-slate-500 font-medium">पासवर्ड: </span>
                 <span className="font-mono font-bold text-emerald-700 ml-1">
-                  {inspectAuditEmployee.employee.password || 'Pass@123'}
+                  {inspectAuditEmployee.employee.password || '—'}
                 </span>
               </div>
               {inspectAuditEmployee.employee.status === 'INACTIVE' ? (
@@ -522,10 +508,6 @@ export function AdminDashboard({
         />
       )}
 
-      {/* Deployment & Production Access Guide Modal */}
-      {showDeploymentGuide && (
-        <DeploymentGuideModal onClose={() => setShowDeploymentGuide(false)} />
-      )}
     </div>
   );
 }

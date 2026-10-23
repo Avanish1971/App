@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Employee, AttendanceRecord, Office, Shift } from '../../types';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
+import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import {
   Search,
   Download,
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
   UserX,
   UserCheck,
+  Trash2,
 } from 'lucide-react';
 
 interface AttendanceRosterProps {
@@ -24,6 +26,7 @@ interface AttendanceRosterProps {
   onOpenAddEmployee: () => void;
   onViewEmployeeAudit: (employee: Employee, record?: AttendanceRecord) => void;
   onToggleEmployeeStatus: (employeeId: string, newStatus: 'ACTIVE' | 'INACTIVE', reason?: string) => void;
+  onDeleteEmployee: (employeeId: string, confirmEmpId: string) => Promise<void>;
 }
 
 export function AttendanceRoster({
@@ -34,6 +37,7 @@ export function AttendanceRoster({
   onOpenAddEmployee,
   onViewEmployeeAudit,
   onToggleEmployeeStatus,
+  onDeleteEmployee,
 }: AttendanceRosterProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('ALL');
@@ -42,6 +46,7 @@ export function AttendanceRoster({
   const [selectedAccountStatus, setSelectedAccountStatus] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [exported, setExported] = useState(false);
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const departments = ['ALL', 'Engineering', 'HR', 'Finance', 'Sales', 'Operations'];
   const statuses = ['ALL', 'PRESENT', 'ON_BREAK', 'WFH', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
@@ -369,13 +374,23 @@ export function AttendanceRoster({
 
                     {/* Audit Action */}
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => onViewEmployeeAudit(emp, record)}
-                        className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                        title="View Audit Trail"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => onViewEmployeeAudit(emp, record)}
+                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="View Audit Trail"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEmployeeToDelete(emp)}
+                          className="px-2 py-1 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1 transition-colors"
+                          title="Employee ki poori profile delete karo"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -394,6 +409,15 @@ export function AttendanceRoster({
             setEmployeeToDeactivate(null);
           }}
           onClose={() => setEmployeeToDeactivate(null)}
+        />
+      )}
+
+      {/* Employee ki poori profile delete */}
+      {employeeToDelete && (
+        <DeleteEmployeeModal
+          employee={employeeToDelete}
+          onConfirm={onDeleteEmployee}
+          onClose={() => setEmployeeToDelete(null)}
         />
       )}
     </div>

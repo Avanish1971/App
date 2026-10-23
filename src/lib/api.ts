@@ -1,3 +1,5 @@
+// Central place for every call to the backend (server/ folder — Express + MongoDB).
+// Change VITE_API_URL in your .env file if the backend runs somewhere other than localhost:5000.
 
 import {
   Office,
@@ -10,6 +12,7 @@ import {
   AuditLogEntry,
   AttendancePolicy,
 } from '../types';
+import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
 // Backend ka address:
 //  1) .env me VITE_API_URL ho to wahi
@@ -21,12 +24,21 @@ const BASE_URL =
     ? 'http://localhost:5000'
     : 'http://54.253.216.68:5000');
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, withAuth = true): Promise<T> {
+  const token = withAuth ? getToken() : null;
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
   if (!res.ok) {
+    // Token expire ho gaya ya galat hai: login page par wapas bhejo
+    if (res.status === 401 && token) {
+      clearToken();
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Request failed: ${res.status} ${BASE_URL}${path}`);
   }
@@ -46,6 +58,12 @@ export const updateEmployeeStatusApi = (
     method: 'PUT',
     body: JSON.stringify({ status, reason }),
   });
+
+export const deleteEmployeeApi = (employeeId: string, confirmEmpId: string) =>
+  request<{
+    ok: boolean;
+    deleted: { attendance: number; leaves: number; regularizations: number; expenses: number };
+  }>(`/api/employees/${employeeId}?confirm=${encodeURIComponent(confirmEmpId)}`, { method: 'DELETE' });
 
 // ---- Offices ----
 export const getOffices = () => request<Office[]>('/api/offices');
@@ -138,3 +156,27 @@ export const sendLocationPingApi = (
     method: 'POST',
     body: JSON.stringify(ping),
   });
+
+// ---- Login ----
+export const adminLoginApi = (email: string, password: string) =>
+  request<{ token: string }>(
+    '/api/auth/admin-login',
+    { method: 'POST', body: JSON.stringify({ email, password }) },
+    false
+  );
+export const employeeLoginApi = (loginId: string, password: string) =>
+  request<{ token: string; employee: { id: string; empId: string; fullName: string } }>(
+    '/api/auth/employee-login',
+    { method: 'POST', body: JSON.stringify({ loginId, password }) },
+    false
+  );
+
+// ---- Employee ka apna data (mobile app) ----
+export interface MeData {
+  employee: Employee;
+  office: Office | null;
+  shift: Shift | null;
+  attendance: AttendanceRecord | null;
+  leaves: LeaveRequest[];
+}
+export const getMeApi = () => request<MeData>('/api/me');

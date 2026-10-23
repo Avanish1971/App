@@ -14,7 +14,6 @@ import { LeaveModule } from './LeaveModule';
 import { RegularizationModal } from './RegularizationModal';
 import { OfflineQueueModal } from './OfflineQueueModal';
 import { ClientCheckInModal } from './ClientCheckInModal';
-import { MobileLoginScreen } from './MobileLoginScreen';
 import {
   ShieldCheck,
   MapPin,
@@ -33,15 +32,14 @@ import {
 
 interface MobileAppSimulatorProps {
   employee: Employee;
-  employees?: Employee[];
   office: Office;
   attendance: AttendanceRecord;
   payrollItem: IndianPayrollItem;
   leaves: LeaveRequest[];
-  onSelectEmployee?: (empId: string) => void;
   onUpdateAttendance: (newRecord: AttendanceRecord) => void;
   onApplyLeave: (leave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => void;
   onApplyRegularization: (reg: Omit<RegularizationRequest, 'id' | 'appliedAt' | 'status'>) => void;
+  onLogout: () => void;
   // Phone ki live GPS location (None ho to abhi location nahi mili)
   livePosition?: { latitude: number; longitude: number; accuracy: number } | null;
   locationStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
@@ -49,17 +47,16 @@ interface MobileAppSimulatorProps {
 
 export function MobileAppSimulator({
   employee,
-  employees,
   office,
   attendance,
   payrollItem,
   leaves,
-  onSelectEmployee,
   onUpdateAttendance,
   onApplyLeave,
   onApplyRegularization,
   livePosition,
   locationStatus,
+  onLogout,
 }: MobileAppSimulatorProps) {
   // Ab location asli GPS se aati hai. GPS nahi mila to hasFix = false.
   const hasFix = !!livePosition;
@@ -74,7 +71,6 @@ export function MobileAppSimulator({
   const [showRegularization, setShowRegularization] = useState(false);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [showClientCheckIn, setShowClientCheckIn] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   // Offline queue simulation
   const [isOffline, setIsOffline] = useState(false);
@@ -220,20 +216,6 @@ export function MobileAppSimulator({
     onUpdateAttendance({ ...attendance, events: newEvents });
   };
 
-  if (!isLoggedIn) {
-    return (
-      <div className="flex-1 bg-slate-900 min-h-screen flex flex-col">
-        <MobileLoginScreen
-          employees={employees || [employee]}
-          onLoginSuccess={(emp) => {
-            onSelectEmployee?.(emp.id);
-            setIsLoggedIn(true);
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 bg-gradient-to-b from-blue-50 via-white to-slate-50 min-h-screen flex flex-col relative text-slate-800 font-sans antialiased">
       {/* Real Mobile Top Bar Status look */}
@@ -261,7 +243,7 @@ export function MobileAppSimulator({
             <div className="text-[10px] text-slate-500 font-mono">ID: {employee.loginId}</div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsLoggedIn(false)} className="w-7 h-7 rounded-lg bg-white text-slate-500 flex items-center justify-center border border-slate-200 shadow-sm">
+            <button onClick={onLogout} title="Logout" className="w-7 h-7 rounded-lg bg-white text-slate-500 flex items-center justify-center border border-slate-200 shadow-sm">
               <Lock className="w-3.5 h-3.5 text-slate-500" />
             </button>
             <img src={employee.avatar} alt={employee.fullName} className="w-10 h-10 rounded-full border-2 border-blue-400 object-cover" />

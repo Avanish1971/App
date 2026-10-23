@@ -13,6 +13,9 @@ const expensesRouter = require('./routes/expenses');
 const auditLogsRouter = require('./routes/auditLogs');
 const policyRouter = require('./routes/policy');
 const { startSweeper } = require('./utils/geofence');
+const authRouter = require('./routes/auth');
+const meRouter = require('./routes/me');
+const { requireRole, attendanceGuard, requestsGuard } = require('./middleware/auth');
 
 const app = express();
 
@@ -21,15 +24,19 @@ app.use(express.json());
 
 app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API running' }));
 
-app.use('/api/employees', employeesRouter);
-app.use('/api/offices', officesRouter);
-app.use('/api/shifts', shiftsRouter);
-app.use('/api/attendance', attendanceRouter);
-app.use('/api/leaves', leavesRouter);
-app.use('/api/regularizations', regularizationsRouter);
-app.use('/api/expenses', expensesRouter);
-app.use('/api/audit-logs', auditLogsRouter);
-app.use('/api/policy', policyRouter);
+// Login ke bina kuch nahi: admin ke kaam sirf admin token se, employee sirf apna data
+const admin = requireRole('admin');
+app.use('/api/auth', authRouter);
+app.use('/api/me', requireRole('employee'), meRouter);
+app.use('/api/employees', admin, employeesRouter);
+app.use('/api/offices', admin, officesRouter);
+app.use('/api/shifts', admin, shiftsRouter);
+app.use('/api/attendance', attendanceGuard, attendanceRouter);
+app.use('/api/leaves', requestsGuard, leavesRouter);
+app.use('/api/regularizations', requestsGuard, regularizationsRouter);
+app.use('/api/expenses', admin, expensesRouter);
+app.use('/api/audit-logs', admin, auditLogsRouter);
+app.use('/api/policy', admin, policyRouter);
 
 const PORT = process.env.PORT || 5000;
 

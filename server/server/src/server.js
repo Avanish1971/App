@@ -15,19 +15,31 @@ const policyRouter = require('./routes/policy');
 const { startSweeper } = require('./utils/geofence');
 const authRouter = require('./routes/auth');
 const meRouter = require('./routes/me');
+const messagesRouter = require('./routes/messages');
+const employeeDocumentsRouter = require('./routes/employeeDocuments');
+const clientVisitsRouter = require('./routes/clientVisits');
+const eventsRouter = require('./routes/events');
 const { requireRole, attendanceGuard, requestsGuard } = require('./middleware/auth');
 
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
-app.use(express.json());
+// Document upload ke liye bada body chahiye (sirf us route par); baaki sab jagah chhota limit
+const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/documents|me\/client-visits)/;
+const smallJson = express.json();
+app.use((req, res, next) => (DOC_ROUTE.test(req.path) ? next() : smallJson(req, res, next)));
 
 app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API running' }));
 
 // Login ke bina kuch nahi: admin ke kaam sirf admin token se, employee sirf apna data
 const admin = requireRole('admin');
 app.use('/api/auth', authRouter);
+app.use('/api/events', eventsRouter); // live stream (token URL me, route khud verify karta hai)
+app.use('/api/me/client-visits', requireRole('employee'), express.json({ limit: '6mb' })); // photos wala bada body
 app.use('/api/me', requireRole('employee'), meRouter);
+app.use('/api/messages', admin, messagesRouter);
+app.use('/api/client-visits', admin, clientVisitsRouter);
+app.use('/api/employees/:id/documents', admin, express.json({ limit: '6mb' }), employeeDocumentsRouter);
 app.use('/api/employees', admin, employeesRouter);
 app.use('/api/offices', admin, officesRouter);
 app.use('/api/shifts', admin, shiftsRouter);

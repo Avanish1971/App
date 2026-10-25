@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   getMeApi,
+  getMyLeaveBalanceApi,
   updateAttendanceTodayApi,
   applyLeaveApi,
   applyRegularizationApi,
@@ -12,7 +13,9 @@ import { calculateIndianPayrollItem } from './utils/payroll';
 import { MobileAppSimulator } from './components/mobile/MobileAppSimulator';
 import { MobileLoginScreen } from './components/mobile/MobileLoginScreen';
 import { useGeofenceTracking } from './components/mobile/useGeofenceTracking';
+import { useLiveEvents } from './lib/realtime';
 import { UpdateBanner } from './components/UpdateBanner.tsx';
+import { MessageInbox } from './components/mobile/MessageInbox';
 
 // Server bhi India (IST) ki date use karta hai
 const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -102,13 +105,14 @@ export default function MobileApp() {
     }
   };
 
+  // Leave apply: server mana kare (jaise leave kam hai) to error screen par dikhne ke liye upar throw hota hai
   const handleApplyLeave = async (leave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => {
-    try {
-      const created = await applyLeaveApi(leave);
-      setMe((m) => (m ? { ...m, leaves: [created, ...m.leaves] } : m));
-    } catch (err) {
-      console.error('Failed to apply leave:', err);
-    }
+    const created = await applyLeaveApi(leave);
+    setMe((m) => (m ? { ...m, leaves: [created, ...m.leaves] } : m));
+    // Leave li hai to balance me se turant kam dikhao
+    getMyLeaveBalanceApi()
+      .then((leaveBalance) => setMe((m) => (m ? { ...m, leaveBalance } : m)))
+      .catch(() => {});
   };
 
   const handleApplyRegularization = async (reg: Omit<RegularizationRequest, 'id' | 'appliedAt' | 'status'>) => {
@@ -118,6 +122,15 @@ export default function MobileApp() {
       console.error('Failed to apply regularization:', err);
     }
   };
+
+  // Admin ne leave approve/reject ki ya branch transfer kiya: apna data turant naya le lo
+  useLiveEvents('employee', authed && !!me, (event) => {
+    if (event === 'leave-updated' || event === 'profile-updated') {
+      getMeApi()
+        .then((data) => setMe(data))
+        .catch(() => {});
+    }
+  });
 
   // ---- Login nahi hai ----
   if (!authed) {
@@ -192,11 +205,13 @@ export default function MobileApp() {
         livePosition={livePosition}
         locationStatus={locationStatus}
         leaves={me.leaves}
+        leaveBalance={me.leaveBalance || null}
         onUpdateAttendance={handleUpdateAttendance}
         onApplyLeave={handleApplyLeave}
         onApplyRegularization={handleApplyRegularization}
         onLogout={logout}
       />
+      <MessageInbox enabled={authed} />
     </>
   );
 }

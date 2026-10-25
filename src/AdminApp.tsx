@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { buildPayrollRun } from './utils/payrollRun';
 import {
   getEmployees,
   addEmployeeApi,
+  uploadEmployeeDocumentApi,
+  transferEmployeeApi,
   updateEmployeeStatusApi,
   deleteEmployeeApi,
   getOffices,
@@ -24,6 +26,9 @@ import {
 } from './lib/api';
 import type { OfficeInput } from './lib/api';
 import { clearToken, getToken, isTokenValid, AUTH_EXPIRED_EVENT } from './lib/auth';
+import { useLiveEvents } from './lib/realtime';
+import { PendingDocument, DOC_TYPE_LABELS, readFileAsBase64 } from './lib/files';
+import { LiveToasts, LiveToast } from './components/admin/LiveToasts';
 import {
   Office,
   Shift,
@@ -39,7 +44,7 @@ import {
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminLoginGate } from './components/admin/AdminLoginGate';
 import { UpdateBanner } from './components/UpdateBanner.tsx';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Radio } from 'lucide-react';
 
 // Admin website: pehle login page, login ke baad hi portal
 export default function AdminApp() {
@@ -220,13 +225,34 @@ export default function AdminApp() {
     }
   };
 
-  const handleAddEmployee = async (newEmployee: Employee) => {
-    try {
-      const created = await addEmployeeApi(newEmployee);
-      setEmployees((prev) => [created, ...prev]);
-    } catch (err) {
-      console.error('Failed to add employee:', err);
+  // Employee banao, phir uske documents ek-ek karke upload karo. Error aaye to modal ko dikhane ke liye throw.
+  const handleAddEmployee = async (newEmployee: Employee, docs: PendingDocument[]) => {
+    const created = await addEmployeeApi(newEmployee);
+    setEmployees((prev) => [created, ...prev]);
+    const failed: string[] = [];
+    for (const d of docs) {
+      try {
+        await uploadEmployeeDocumentApi(created.id, {
+          type: d.type,
+          label: d.label,
+          fileName: d.file.name,
+          mimeType: d.file.type,
+          dataBase64: await readFileAsBase64(d.file),
+        });
+      } catch {
+        failed.push(d.label || DOC_TYPE_LABELS[d.type]);
+      }
     }
+    return { failed };
+  };
+
+  // Employee ko doosre branch me bhejo
+  const handleTransferEmployee = async (
+    employeeId: string,
+    payload: { officeId: string; shiftId?: string; reportingManager?: string; reason?: string }
+  ) => {
+    const updated = await transferEmployeeApi(employeeId, payload);
+    setEmployees((prev) => prev.map((e) => (e.id === employeeId ? { ...e, ...updated } : e)));
   };
 
   const handleToggleEmployeeStatus = async (
@@ -278,6 +304,65 @@ export default function AdminApp() {
     );
   };
 
+
+  // ---- Real-time: employee office me aate hi (ya late/absent hote hi) turant yahan dikhe ----
+  const attendanceRef = useRef(attendanceRecords);
+  attendanceRef.current = attendanceRecords;
+  const employeesRef = useRef(employees);
+  employeesRef.current = employees;
+  const [toasts, setToasts] = useState<LiveToast[]>([]);
+
+  const pushToast = (t: Omit<LiveToast, 'id'>) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev.slice(-3), { ...t, id }]);
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 7000);
+  };
+
+  const live = useLiveEvents('admin', authed && !isLoading && !loadError, async (event, data) => {
+    if (event === 'reconnected') {
+      // Net toot kar wapas aaya: beech me jo miss hua wo ek baar me le lo
+      try {
+        const [att, emps] = await Promise.all([getAttendance(), getEmployees()]);
+        setAttendanceRecords(att);
+        setEmployees(emps);
+      } catch {
+        // agli baar
+      }
+      return;
+    }
+    if (event !== 'attendance' || !data || !data.record) return;
+
+    const rec = data.record as AttendanceRecord;
+    const prev = attendanceRef.current.find((r) => r.id === rec.id);
+    const emp = employeesRef.current.find((e) => e.id === rec.employeeId);
+    const name = emp ? emp.fullName : 'Employee';
+
+    setAttendanceRecords((list) =>
+      list.some((r) => r.id === rec.id) ? list.map((r) => (r.id === rec.id ? rec : r)) : [...list, rec]
+    );
+    if (data.location) {
+      const loc = data.location;
+      setEmployees((list) =>
+        list.map((e) =>
+          e.id === loc.employeeId
+            ? { ...e, currentLat: loc.latitude, currentLng: loc.longitude, accuracyMeters: loc.accuracy }
+            : e
+        )
+      );
+    }
+
+    if (data.reason === 'LATE_MARK') {
+      pushToast({ kind: 'late', title: `${name} abhi tak office nahi aaya`, detail: 'Shift time nikal gaya: LATE mark ho gaya' });
+    } else if (rec.status === 'PRESENT' && prev?.status !== 'PRESENT') {
+      pushToast(
+        rec.isLate
+          ? { kind: 'late', title: `${name} office me aaya: LATE`, detail: `Check-in ${rec.checkInTime || ''}` }
+          : { kind: 'present', title: `${name} office me aaya: PRESENT`, detail: `Check-in ${rec.checkInTime || ''}` }
+      );
+    } else if (rec.status === 'ABSENT' && prev?.status !== 'ABSENT') {
+      pushToast({ kind: 'absent', title: `${name} office se bahar gaya: ABSENT`, detail: 'Radius ke bahar grace time se zyada raha' });
+    }
+  });
 
   // Login nahi hai to sirf login page
   if (!authed) {
@@ -349,9 +434,20 @@ export default function AdminApp() {
           </div>
         </div>
 
-        <div className="flex items-center bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs text-indigo-700 font-semibold gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Super Admin Access Active</span>
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl border text-[11px] font-bold ${
+              live ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}
+            title={live ? 'Real-time connection chalu hai' : 'Live connection nahi hai, har 30 sec me refresh hota rahega'}
+          >
+            <Radio className={`w-3.5 h-3.5 ${live ? 'animate-pulse' : ''}`} />
+            <span>{live ? 'LIVE' : 'Offline'}</span>
+          </div>
+          <div className="hidden sm:flex items-center bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs text-indigo-700 font-semibold gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Super Admin Access Active</span>
+          </div>
         </div>
       </header>
 
@@ -378,11 +474,13 @@ export default function AdminApp() {
           onLockPayroll={handleLockPayroll}
           onSavePolicy={handleSavePolicy}
           onAddEmployee={handleAddEmployee}
+          onTransferEmployee={handleTransferEmployee}
           onToggleEmployeeStatus={handleToggleEmployeeStatus}
           onDeleteEmployee={handleDeleteEmployee}
           onLogout={handleLogout}
         />
       </main>
+      <LiveToasts toasts={toasts} onDismiss={(id) => setToasts((p) => p.filter((x) => x.id !== id))} />
     </div>
   );
 }

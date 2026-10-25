@@ -9,6 +9,8 @@ const AttendanceRecord = require('../models/AttendanceRecord');
 const AttendancePolicy = require('../models/AttendancePolicy');
 const { distanceMeters } = require('./geo');
 const { todayIST, nowTimeIST, minutesNowIST, parseClock } = require('./time');
+const LeaveRequest = require('../models/LeaveRequest');
+const { broadcastAdmin } = require('./realtime');
 
 // In status wale employees ka attendance GPS se nahi badalta
 const PROTECTED_STATUSES = ['ON_LEAVE', 'WFH', 'ON_DUTY', 'ON_BREAK'];
@@ -51,7 +53,7 @@ function markAbsent(record, lat, lng, accuracy, minutesOutside) {
 }
 
 // App se aayi ek location ko process karta hai
-async function processPing(employeeId, ping) {
+async function processPingInner(employeeId, ping) {
   const lat = Number(ping && ping.latitude);
   const lng = Number(ping && ping.longitude);
   const accuracy = Number(ping && ping.accuracy) || 0;
@@ -151,6 +153,24 @@ async function processPing(employeeId, ping) {
   return base;
 }
 
+// Ping process karke turant admin panel ko live update bhejta hai
+async function processPing(employeeId, ping) {
+  const result = await processPingInner(employeeId, ping);
+  if (result && result.record) {
+    const rec = result.record;
+    broadcastAdmin('attendance', {
+      record: typeof rec.toObject === 'function' ? rec.toObject() : rec,
+      location: {
+        employeeId,
+        latitude: Number(ping.latitude),
+        longitude: Number(ping.longitude),
+        accuracy: Number(ping.accuracy) || 0,
+      },
+    });
+  }
+  return result;
+}
+
 // Har minute chalta hai: jo employee radius se bahar nikle aur app band ho gaya
 // (isliye naya location nahi aa raha), unhe grace time ke baad ABSENT kar deta hai.
 async function sweepExpiredExits() {
@@ -165,15 +185,79 @@ async function sweepExpiredExits() {
     const minutes = Math.round((Date.now() - new Date(record.outsideSince).getTime()) / 60000);
     markAbsent(record, record.lastLat, record.lastLng, 0, minutes);
     await record.save();
+    broadcastAdmin('attendance', { record: record.toObject(), reason: 'AUTO_ABSENT' });
   }
   return stale.length;
+}
+
+const { WEEKLY_OFF } = require('./weeklyOff');
+function weekdayIST() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getDay();
+}
+
+// Shift start + grace ke baad bhi jo employee office me nahi aaya use LATE mark karta hai.
+// (Leave/WFH/on-duty/field staff aur weekly off ko chhod kar.) Aane par wo PRESENT + LATE hi dikhega.
+async function markNoShowsLate() {
+  if (WEEKLY_OFF.includes(weekdayIST())) return 0;
+  const date = todayIST();
+  const nowMin = minutesNowIST();
+  const [employees, shifts, records, leaves] = await Promise.all([
+    Employee.find({ status: { $ne: 'INACTIVE' }, workType: { $ne: 'FIELD_WORK' } }).lean(),
+    Shift.find().lean(),
+    AttendanceRecord.find({ date }).lean(),
+    LeaveRequest.find({ status: 'APPROVED', startDate: { $lte: date }, endDate: { $gte: date } }).lean(),
+  ]);
+  const onLeave = new Set(leaves.map((l) => l.employeeId));
+  const byEmp = new Map(records.map((r) => [r.employeeId, r]));
+  let count = 0;
+
+  for (const emp of employees) {
+    const shift = shifts.find((s) => s.id === emp.shiftId);
+    if (!shift || shift.isOvernight) continue;
+    const start = parseClock(shift.startTime);
+    const end = parseClock(shift.endTime);
+    if (start === null) continue;
+    if (nowMin <= start + (shift.gracePeriodMinutes || 0)) continue; // abhi time hai
+    if (end !== null && nowMin >= end) continue; // shift khatam, ab late mark ka matlab nahi
+    if (onLeave.has(emp.id)) continue;
+    const rec = byEmp.get(emp.id);
+    if (rec && (rec.checkInTime || rec.isLate || rec.status !== 'SCHEDULED')) continue;
+
+    try {
+      const updated = await AttendanceRecord.findOneAndUpdate(
+        { employeeId: emp.id, date },
+        {
+          $set: { isLate: true },
+          $setOnInsert: {
+            id: `att_${emp.id}_${date}`,
+            officeId: emp.officeId,
+            shiftId: emp.shiftId,
+            status: 'SCHEDULED',
+            source: 'AUTO_GEOFENCE',
+            verificationStatus: 'PENDING',
+          },
+          $push: {
+            events: newEvent('LATE_MARK', undefined, undefined, 0,
+              `Shift ${shift.startTime} + ${shift.gracePeriodMinutes || 0} min grace ke baad bhi office ke radius me nahi aaye -> LATE`),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      broadcastAdmin('attendance', { record: updated.toObject(), reason: 'LATE_MARK' });
+      count += 1;
+    } catch (err) {
+      console.error('Late mark error:', emp.id, err.message);
+    }
+  }
+  return count;
 }
 
 function startSweeper() {
   setInterval(() => {
     sweepExpiredExits().catch((err) => console.error('Geofence sweeper error:', err.message));
+    markNoShowsLate().catch((err) => console.error('Late sweeper error:', err.message));
   }, 60000);
   console.log('Geofence sweeper chalu (har 60 sec)');
 }
 
-module.exports = { processPing, sweepExpiredExits, startSweeper };
+module.exports = { processPing, sweepExpiredExits, markNoShowsLate, startSweeper };

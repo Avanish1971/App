@@ -42,6 +42,56 @@ export interface Shift {
   isOvernight?: boolean;
 }
 
+export type LeaveKind = 'CASUAL' | 'SICK' | 'EARNED';
+
+export interface EducationEntry {
+  degree: string;
+  institute: string;
+  year: string;
+}
+
+export interface TransferEntry {
+  date: string;
+  fromOfficeId?: string;
+  fromOfficeName?: string;
+  toOfficeId: string;
+  toOfficeName: string;
+  reason?: string;
+}
+
+export type EmployeeDocType =
+  | 'AADHAAR'
+  | 'PAN'
+  | 'BANK_PROOF'
+  | 'EDUCATION'
+  | 'PHOTO'
+  | 'RESUME'
+  | 'OFFER_LETTER'
+  | 'OTHER';
+
+// Server me save hui file ki details (file ka data alag se download hota hai)
+export interface EmployeeDocument {
+  id: string;
+  employeeId: string;
+  type: EmployeeDocType;
+  label?: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+}
+
+export interface LeaveBalanceItem {
+  total: number;
+  used: number;
+  pending: number;
+  remaining: number;
+}
+export interface LeaveBalance {
+  year: string;
+  balances: Record<LeaveKind, LeaveBalanceItem>;
+}
+
 export interface Employee {
   id: string;
   empId: string;
@@ -70,9 +120,20 @@ export interface Employee {
   hraMonthly: number;
   specialAllowanceMonthly: number;
   bankAccount: string;
+  bankName?: string;
   ifsc: string;
   pan: string;
+  aadhaar?: string;
   uan: string;
+  education?: EducationEntry[];
+  // Joining: training period ya seedha working
+  workMode?: 'TRAINING' | 'DIRECT';
+  trainingMonths?: number;
+  trainingStipendMonthly?: number;
+  trainingEndDate?: string;
+  // Saal bhar ki fix leave (khali = default 12/10/15)
+  leaveQuota?: Partial<Record<LeaveKind, number>>;
+  transferHistory?: TransferEntry[];
   // Geolocation simulation info
   currentLat: number;
   currentLng: number;
@@ -109,15 +170,42 @@ export interface AttendanceRecord {
   lastLng?: number;
   lastDistanceMeters?: number;
   insideGeofence?: boolean;
-  clientVisit?: {
-    clientName: string;
-    clientLocation: string;
-    purpose: string;
-    timestamp: string;
-    latitude: number;
-    longitude: number;
-  };
+  signalLost?: boolean; // true = location nahi aa rahi (app/location band)
+  clientVisit?: ClientVisitSummary;
+  clientVisits?: ClientVisitSummary[];
   events: AttendanceEvent[];
+}
+
+// Attendance record ke andar visit ka chhota summary
+export interface ClientVisitSummary {
+  visitId?: string;
+  clientName: string;
+  clientLocation: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  purpose: string;
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+
+// Field work visit ki poori entry (photos alag se download hoti hain)
+export interface ClientVisit {
+  id: string;
+  employeeId: string;
+  employeeName?: string;
+  date: string;
+  time: string;
+  clientName: string;
+  clientLocation: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  purpose: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  visitedAt: string;
 }
 
 export interface AttendanceEvent {
@@ -135,7 +223,10 @@ export interface AttendanceEvent {
     | 'CHECK_OUT'
     | 'FRAUD_SUSPECTED'
     | 'OFFLINE_QUEUED'
-    | 'REGULARIZATION_APPLIED';
+    | 'REGULARIZATION_APPLIED'
+    | 'LATE_MARK'
+    | 'SIGNAL_LOST'
+    | 'SIGNAL_RESTORED';
   latitude: number;
   longitude: number;
   accuracy: number;
@@ -246,4 +337,27 @@ export interface AttendancePolicy {
   autoCheckoutTime: string;
   requireMockLocationCheck: boolean;
   allowOfflineAttendance: boolean;
+}
+
+// ---- Admin -> Employee messages ----
+// Admin side: poora message (kisko gaya, kitno ne padha)
+export interface AdminMessage {
+  id: string;
+  text: string;
+  fromName: string;
+  toAll: boolean;
+  recipientIds: string[];
+  recipientNames: string[];
+  sentAt: string;
+  readCount: number;
+  totalCount: number;
+}
+// Employee side: sirf apne liye aaya message
+export interface InboxMessage {
+  id: string;
+  text: string;
+  fromName: string;
+  toAll: boolean;
+  sentAt: string;
+  read: boolean;
 }

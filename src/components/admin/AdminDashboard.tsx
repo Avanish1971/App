@@ -20,6 +20,12 @@ import { ApprovalCenter } from './ApprovalCenter';
 import { ShiftPolicySettings } from './ShiftPolicySettings';
 import { AuditLogViewer } from './AuditLogViewer';
 import { AddEmployeeModal } from './AddEmployeeModal';
+import { AdminSidebar, AdminTab } from './AdminSidebar';
+import { MonthlyAttendanceReport } from './MonthlyAttendanceReport';
+import { EmployeeDirectory } from './EmployeeDirectory';
+import { MessageCenter } from './MessageCenter';
+import { FieldVisitsPanel } from './FieldVisitsPanel';
+import type { PendingDocument } from '../../lib/files';
 import {
   Users,
   CheckCircle2,
@@ -39,6 +45,7 @@ import {
   UserPlus,
   LogOut,
   HelpCircle,
+  Menu,
 } from 'lucide-react';
 import { formatINR } from '../../utils/payroll';
 
@@ -62,7 +69,11 @@ interface AdminDashboardProps {
   onActionExpense: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onLockPayroll: () => void;
   onSavePolicy: (newPolicy: AttendancePolicy) => void;
-  onAddEmployee: (newEmployee: Employee) => void;
+  onAddEmployee: (newEmployee: Employee, docs: PendingDocument[]) => Promise<{ failed: string[] }>;
+  onTransferEmployee: (
+    employeeId: string,
+    payload: { officeId: string; shiftId?: string; reportingManager?: string; reason?: string }
+  ) => Promise<void>;
   onToggleEmployeeStatus: (employeeId: string, newStatus: 'ACTIVE' | 'INACTIVE', reason?: string) => void;
   onDeleteEmployee: (employeeId: string, confirmEmpId: string) => Promise<void>;
   onLogout: () => void;
@@ -89,11 +100,14 @@ export function AdminDashboard({
   onLockPayroll,
   onSavePolicy,
   onAddEmployee,
+  onTransferEmployee,
   onToggleEmployeeStatus,
   onDeleteEmployee,
   onLogout,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'map' | 'locations' | 'roster' | 'approvals' | 'payroll' | 'policy' | 'audit'>('map');
+  const [activeTab, setActiveTab] = useState<AdminTab>('map');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [directoryEmployeeId, setDirectoryEmployeeId] = useState<string | null>(null);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [inspectAuditEmployee, setInspectAuditEmployee] = useState<{
     employee: Employee;
@@ -117,7 +131,28 @@ export function AdminDashboard({
     expenses.filter((e) => e.status === 'PENDING').length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="flex items-start">
+    <AdminSidebar
+      activeTab={activeTab}
+      onChange={(tab) => {
+        if (tab === 'employees') setDirectoryEmployeeId(null);
+        setActiveTab(tab);
+      }}
+      onAddEmployee={() => setShowAddEmployeeModal(true)}
+      pendingApprovalsCount={pendingApprovalsCount}
+      open={sidebarOpen}
+      onClose={() => setSidebarOpen(false)}
+    />
+    <div className="flex-1 min-w-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Mobile: sidebar kholne ka button */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="lg:hidden flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-white border border-slate-200 rounded-xl text-slate-700"
+      >
+        <Menu className="w-4 h-4" />
+        <span>Menu</span>
+      </button>
+
       {/* Top Organization Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
@@ -224,98 +259,6 @@ export function AdminDashboard({
         </div>
       </div>
 
-      {/* Primary Dashboard Navigation Tabs */}
-      <div className="flex border-b border-slate-200 text-xs overflow-x-auto space-x-1">
-        <button
-          onClick={() => setActiveTab('map')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'map'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Navigation className="w-4 h-4 text-indigo-600" />
-          <span>Live Geofence Radar</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('locations')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'locations'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <MapPin className="w-4 h-4 text-indigo-600" />
-          <span>Office Locations</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('roster')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'roster'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-4 h-4 text-indigo-600" />
-          <span>Daily Attendance Roster</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('approvals')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'approvals'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <FileCheck className="w-4 h-4 text-indigo-600" />
-          <span>Approval Center</span>
-          {pendingApprovalsCount > 0 && (
-            <span className="px-1.5 py-0.2 bg-indigo-600 text-white font-mono text-[10px] rounded-full">
-              {pendingApprovalsCount}
-            </span>
-          )}
-        </button>
-
-        {/* <button
-          onClick={() => setActiveTab('payroll')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'payroll'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <IndianRupee className="w-4 h-4 text-indigo-600" />
-          <span>Indian Statutory Payroll</span>
-        </button> */}
-
-        <button
-          onClick={() => setActiveTab('policy')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'policy'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Sliders className="w-4 h-4 text-indigo-600" />
-          <span>Policy & Shift Engine</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`py-3 px-4 font-semibold border-b-2 flex items-center gap-2 whitespace-nowrap transition-colors ${
-            activeTab === 'audit'
-              ? 'border-indigo-500 text-slate-900'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Shield className="w-4 h-4 text-indigo-600" />
-          <span>Audit Logs</span>
-        </button>
-      </div>
-
       {/* Tab Panels */}
       <div>
         {activeTab === 'map' && (
@@ -343,12 +286,40 @@ export function AdminDashboard({
             attendanceRecords={attendanceRecords}
             offices={offices}
             shifts={shifts}
-            onOpenAddEmployee={() => setShowAddEmployeeModal(true)}
             onViewEmployeeAudit={(emp, rec) => setInspectAuditEmployee({ employee: emp, record: rec })}
             onToggleEmployeeStatus={onToggleEmployeeStatus}
             onDeleteEmployee={onDeleteEmployee}
           />
         )}
+
+        {activeTab === 'monthly' && (
+          <MonthlyAttendanceReport
+            employees={employees}
+            offices={offices}
+            onOpenEmployee={(id) => {
+              setDirectoryEmployeeId(id);
+              setActiveTab('employees');
+            }}
+          />
+        )}
+
+        {activeTab === 'employees' && (
+          <EmployeeDirectory
+            employees={employees}
+            offices={offices}
+            shifts={shifts}
+            initialEmployeeId={directoryEmployeeId}
+            attendanceRecords={attendanceRecords}
+            onToggleEmployeeStatus={onToggleEmployeeStatus}
+            onDeleteEmployee={onDeleteEmployee}
+            onViewAudit={(emp, rec) => setInspectAuditEmployee({ employee: emp, record: rec })}
+            onTransferEmployee={onTransferEmployee}
+          />
+        )}
+
+        {activeTab === 'messages' && <MessageCenter employees={employees} />}
+
+        {activeTab === 'visits' && <FieldVisitsPanel employees={employees} />}
 
         {activeTab === 'approvals' && (
           <ApprovalCenter
@@ -455,6 +426,10 @@ export function AdminDashboard({
                 <div><strong>कंपनी / क्लाइंट:</strong> {inspectAuditEmployee.record.clientVisit.clientName}</div>
                 <div><strong>स्थान:</strong> {inspectAuditEmployee.record.clientVisit.clientLocation}</div>
                 <div><strong>उद्देश्य:</strong> {inspectAuditEmployee.record.clientVisit.purpose}</div>
+                {inspectAuditEmployee.record.clientVisit.contactPerson && (
+                  <div><strong>क्लाइंट से मिले:</strong> {inspectAuditEmployee.record.clientVisit.contactPerson} {inspectAuditEmployee.record.clientVisit.contactPhone && `(${inspectAuditEmployee.record.clientVisit.contactPhone})`}</div>
+                )}
+                <div className="text-[10px]">Photos aur poori detail: sidebar → <strong>Field Visits</strong></div>
                 <div className="text-[10px] text-emerald-600 font-semibold pt-0.5">
                   ✓ स्टेटस: PRESENT (On-Duty) — गैरहाजिरी नहीं लगाई गई
                 </div>
@@ -502,12 +477,13 @@ export function AdminDashboard({
         <AddEmployeeModal
           offices={offices}
           shifts={shifts}
-          existingEmployeesCount={employees.length}
+          employees={employees}
           onAddEmployee={onAddEmployee}
           onClose={() => setShowAddEmployeeModal(false)}
         />
       )}
 
+    </div>
     </div>
   );
 }

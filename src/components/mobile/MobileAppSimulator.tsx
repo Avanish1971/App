@@ -7,6 +7,7 @@ import {
   LeaveRequest,
   RegularizationRequest,
   IndianPayrollItem,
+  LeaveBalance,
 } from '../../types';
 import { validateGeofence, formatDistance } from '../../utils/geo';
 import { PayslipViewer } from './PayslipViewer';
@@ -37,8 +38,10 @@ interface MobileAppSimulatorProps {
   payrollItem: IndianPayrollItem;
   leaves: LeaveRequest[];
   onUpdateAttendance: (newRecord: AttendanceRecord) => void;
-  onApplyLeave: (leave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => void;
+  leaveBalance?: LeaveBalance | null;
+  onApplyLeave: (leave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => Promise<void>;
   onApplyRegularization: (reg: Omit<RegularizationRequest, 'id' | 'appliedAt' | 'status'>) => void;
+  onClientVisitSaved: (record: AttendanceRecord) => void;
   onLogout: () => void;
   // Phone ki live GPS location (None ho to abhi location nahi mili)
   livePosition?: { latitude: number; longitude: number; accuracy: number } | null;
@@ -51,9 +54,11 @@ export function MobileAppSimulator({
   attendance,
   payrollItem,
   leaves,
+  leaveBalance,
   onUpdateAttendance,
   onApplyLeave,
   onApplyRegularization,
+  onClientVisitSaved,
   livePosition,
   locationStatus,
   onLogout,
@@ -122,43 +127,6 @@ export function MobileAppSimulator({
           longitude: userLng,
           accuracy,
           note: `Geo-verified check-in at ${office.name}`,
-        },
-      ],
-    };
-    onUpdateAttendance(newRecord);
-  };
-
-  // Client Check-In Action
-  const handleConfirmClientCheckIn = (details: { clientName: string; clientLocation: string; purpose: string; latitude: number; longitude: number; }) => {
-    const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const newRecord: AttendanceRecord = {
-      ...attendance,
-      status: 'ON_DUTY',
-      checkInTime: nowTime,
-      checkInLat: details.latitude,
-      checkInLng: details.longitude,
-      checkInAccuracy: accuracy,
-      source: 'MANUAL',
-      verificationStatus: 'VERIFIED',
-      workingMinutes: attendance.workingMinutes || 480,
-      clientVisit: {
-        clientName: details.clientName,
-        clientLocation: details.clientLocation,
-        purpose: details.purpose,
-        timestamp: nowTime,
-        latitude: details.latitude,
-        longitude: details.longitude,
-      },
-      events: [
-        ...attendance.events,
-        {
-          id: `ev_${Date.now()}`,
-          timestamp: nowTime,
-          eventType: 'CLIENT_CHECKIN',
-          latitude: details.latitude,
-          longitude: details.longitude,
-          accuracy,
-          note: `Client Site Checked In: ${details.clientName}`,
         },
       ],
     };
@@ -308,12 +276,9 @@ export function MobileAppSimulator({
 
           {employee.workType === 'FIELD_WORK' ? (
             attendance.status === 'SCHEDULED' || attendance.status === 'OUTSIDE_GEOFENCE' ? (
-              <button
-                onClick={() => setShowClientCheckIn(true)}
-                className="w-full py-3 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg"
-              >
-                Client Site Check-In
-              </button>
+              <div className="w-full py-2.5 px-3 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-medium rounded-xl text-center">
+                Field Work: client ke paas pahunchkar neeche <strong>Client Site Check-In</strong> se hazri lagao
+              </div>
             ) : (
               <button
                 onClick={handleToggleBreak}
@@ -383,6 +348,24 @@ export function MobileAppSimulator({
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400" />
           </button>
+
+          {employee.workType === 'FIELD_WORK' && (
+            <button
+              onClick={() => setShowClientCheckIn(true)}
+              className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-left flex items-center justify-between w-full"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-teal-500 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <div className="font-semibold text-[11px] text-slate-900">Client Site Check-In</div>
+                  <div className="text-[9px] text-slate-500">Location, selfie & visit details</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -404,7 +387,14 @@ export function MobileAppSimulator({
 
       {/* Modals Containers */}
       {showPayslip && <PayslipViewer payrollItem={payrollItem} onClose={() => setShowPayslip(false)} />}
-      {showLeave && <LeaveModule leaves={leaves} onApplyLeave={onApplyLeave} onClose={() => setShowLeave(false)} />}
+      {showLeave && <LeaveModule
+          leaves={leaves}
+          leaveBalance={leaveBalance || null}
+          employeeId={employee.id}
+          employeeName={employee.fullName}
+          onApplyLeave={onApplyLeave}
+          onClose={() => setShowLeave(false)}
+        />}
       {showRegularization && (
         <RegularizationModal onApplyRegularization={onApplyRegularization} onClose={() => setShowRegularization(false)} />
       )}
@@ -418,13 +408,7 @@ export function MobileAppSimulator({
         />
       )}
       {showClientCheckIn && (
-        <ClientCheckInModal
-          currentLat={userLat}
-          currentLng={userLng}
-          accuracy={accuracy}
-          onConfirmClientCheckIn={handleConfirmClientCheckIn}
-          onClose={() => setShowClientCheckIn(false)}
-        />
+        <ClientCheckInModal onSaved={onClientVisitSaved} onClose={() => setShowClientCheckIn(false)} />
       )}
     </div>
   );

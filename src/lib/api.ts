@@ -11,6 +11,12 @@ import {
   ExpenseClaim,
   AuditLogEntry,
   AttendancePolicy,
+  AdminMessage,
+  InboxMessage,
+  EmployeeDocument,
+  EmployeeDocType,
+  LeaveBalance,
+  ClientVisit,
 } from '../types';
 import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
@@ -18,7 +24,7 @@ import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 //  1) .env me VITE_API_URL ho to wahi
 //  2) site laptop par (localhost) khuli ho to laptop ka backend  (http://localhost:5000)
 //  3) baaki sab jagah (AWS website, phone ka app) AWS ka backend
-const BASE_URL =
+export const BASE_URL =
   import.meta.env.VITE_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:5000'
@@ -79,6 +85,12 @@ export const getShifts = () => request<Shift[]>('/api/shifts');
 // ---- Attendance ----
 export const getAttendance = (date?: string) =>
   request<AttendanceRecord[]>(`/api/attendance${date ? `?date=${date}` : ''}`);
+// Ek mahine (YYYY-MM) ke saare employees ke records — monthly report ke liye
+export const getAttendanceMonthApi = (month: string) =>
+  request<AttendanceRecord[]>(`/api/attendance/monthly/${month}`);
+// Ek employee ki poori attendance history
+export const getEmployeeAttendanceApi = (employeeId: string) =>
+  request<AttendanceRecord[]>(`/api/attendance/${employeeId}`);
 export const updateAttendanceTodayApi = (employeeId: string, record: Partial<AttendanceRecord>) =>
   request<AttendanceRecord>(`/api/attendance/${employeeId}/today`, {
     method: 'PUT',
@@ -178,5 +190,100 @@ export interface MeData {
   shift: Shift | null;
   attendance: AttendanceRecord | null;
   leaves: LeaveRequest[];
+  leaveBalance?: LeaveBalance;
 }
 export const getMeApi = () => request<MeData>('/api/me');
+
+// ---- Messages ----
+export const getMessagesApi = () => request<AdminMessage[]>('/api/messages');
+// recipientIds khali = sabhi employees ko
+export const sendMessageApi = (text: string, recipientIds: string[]) =>
+  request<AdminMessage>('/api/messages', { method: 'POST', body: JSON.stringify({ text, recipientIds }) });
+export const getMyMessagesApi = () => request<InboxMessage[]>('/api/me/messages');
+export const markMyMessagesReadApi = () =>
+  request<{ ok: boolean }>('/api/me/messages/read', { method: 'POST' });
+
+export const getMyLeaveBalanceApi = () => request<LeaveBalance>('/api/me/leave-balance');
+
+// ---- Employee documents (file MongoDB me save hoti hai) ----
+export const getEmployeeDocumentsApi = (employeeId: string) =>
+  request<EmployeeDocument[]>(`/api/employees/${employeeId}/documents`);
+
+export const uploadEmployeeDocumentApi = (
+  employeeId: string,
+  doc: { type: EmployeeDocType; label?: string; fileName: string; mimeType: string; dataBase64: string }
+) =>
+  request<EmployeeDocument>(`/api/employees/${employeeId}/documents`, {
+    method: 'POST',
+    body: JSON.stringify(doc),
+  });
+
+export const deleteEmployeeDocumentApi = (employeeId: string, docId: string) =>
+  request<{ ok: boolean }>(`/api/employees/${employeeId}/documents/${docId}`, { method: 'DELETE' });
+
+// File dekhne ke liye: token ke saath download karke naye tab me kholo
+export async function openEmployeeDocumentApi(employeeId: string, docId: string) {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/api/employees/${employeeId}/documents/${docId}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'File nahi khul paayi');
+  }
+  const url = URL.createObjectURL(await res.blob());
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+// ---- Leave balance (admin) ----
+export const getEmployeeLeaveBalanceApi = (employeeId: string) =>
+  request<LeaveBalance>(`/api/employees/${employeeId}/leave-balance`);
+
+// ---- Branch transfer ----
+export const transferEmployeeApi = (
+  employeeId: string,
+  payload: { officeId: string; shiftId?: string; reportingManager?: string; reason?: string }
+) =>
+  request<Employee>(`/api/employees/${employeeId}/transfer`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+// ---- Field work: client visit ----
+export interface ClientVisitPayload {
+  clientName: string;
+  clientLocation: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  purpose: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  selfieBase64: string;
+  selfieMime: string;
+  sitePhotoBase64: string;
+  sitePhotoMime: string;
+}
+export const submitClientVisitApi = (payload: ClientVisitPayload) =>
+  request<{ record: AttendanceRecord; visit: ClientVisit }>('/api/me/client-visits', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+// Admin: visits ki list. date YA from+to, aur optional employeeId
+export const getClientVisitsApi = (params: { date?: string; from?: string; to?: string; employeeId?: string }) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => v && q.set(k, v));
+  return request<ClientVisit[]>(`/api/client-visits?${q.toString()}`);
+};
+
+// Photo token ke saath laao aur <img> ke liye object URL do
+export async function fetchClientVisitPhotoUrl(visitId: string, kind: 'selfie' | 'site'): Promise<string> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/api/client-visits/${visitId}/photo/${kind}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('Photo nahi mili');
+  return URL.createObjectURL(await res.blob());
+}

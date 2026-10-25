@@ -41,6 +41,12 @@ const LeaveRequest = require('../models/LeaveRequest');
 const RegularizationRequest = require('../models/RegularizationRequest');
 const ExpenseClaim = require('../models/ExpenseClaim');
 const AuditLogEntry = require('../models/AuditLogEntry');
+const EmployeeDocument = require('../models/EmployeeDocument');
+const Office = require('../models/Office');
+const Shift = require('../models/Shift');
+const { getBalance } = require('../utils/leaveBalance');
+const { todayIST } = require('../utils/time');
+const { broadcastAdmin, sendToEmployee } = require('../utils/realtime');
 
 async function audit(action, employee, details) {
   try {
@@ -79,6 +85,76 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /api/employees/:id/leave-balance?year=2026 -> quota, li hui, pending aur bachi leave
+router.get('/:id/leave-balance', async (req, res) => {
+  try {
+    const employee = await Employee.findOne({ id: req.params.id });
+    if (!employee) return res.status(404).json({ error: 'Employee nahi mila' });
+    const year = /^\d{4}$/.test(String(req.query.year || '')) ? req.query.year : todayIST().slice(0, 4);
+    res.json(await getBalance(employee, year));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/employees/:id/transfer  { officeId, shiftId?, reportingManager?, reason? }
+// Employee ek branch se doosre me: ab usi branch ke radius me attendance lagegi aur wahi ke roster me dikhega.
+router.put('/:id/transfer', async (req, res) => {
+  try {
+    const { officeId, shiftId, reportingManager, reason } = req.body || {};
+    const employee = await Employee.findOne({ id: req.params.id });
+    if (!employee) return res.status(404).json({ error: 'Employee nahi mila' });
+    if (employee.status === 'INACTIVE') return res.status(400).json({ error: 'Deactivated employee ka transfer nahi ho sakta' });
+
+    const newOffice = await Office.findOne({ id: officeId });
+    if (!newOffice) return res.status(404).json({ error: 'Naya office/branch nahi mila' });
+    if (employee.officeId === newOffice.id) return res.status(400).json({ error: 'Employee pehle se isi branch me hai' });
+
+    if (shiftId && !(await Shift.findOne({ id: shiftId }))) {
+      return res.status(404).json({ error: 'Shift nahi mili' });
+    }
+
+    // Abhi office me check-in hai to beech me branch badalne se attendance bigad jayegi
+    const today = await AttendanceRecord.findOne({ employeeId: employee.id, date: todayIST() });
+    if (today && today.checkInTime && !today.checkOutTime && ['PRESENT', 'ON_BREAK', 'ON_DUTY'].includes(today.status)) {
+      return res.status(409).json({ error: 'Employee abhi office me check-in hai. Check-out ke baad transfer karo.' });
+    }
+
+    const oldOffice = await Office.findOne({ id: employee.officeId });
+    employee.transferHistory.push({
+      date: todayIST(),
+      fromOfficeId: employee.officeId,
+      fromOfficeName: oldOffice ? oldOffice.name : '',
+      toOfficeId: newOffice.id,
+      toOfficeName: newOffice.name,
+      reason: String(reason || '').slice(0, 300),
+    });
+    employee.officeId = newOffice.id;
+    employee.branch = newOffice.city;
+    if (shiftId) employee.shiftId = shiftId;
+    if (reportingManager && String(reportingManager).trim()) employee.reportingManager = String(reportingManager).trim();
+    await employee.save();
+
+    // Aaj ka record naye branch ke naam par (purane din purane branch ke hi rahenge)
+    if (today) {
+      today.officeId = newOffice.id;
+      if (shiftId) today.shiftId = shiftId;
+      await today.save();
+      broadcastAdmin('attendance', { record: today.toObject() });
+    }
+
+    await audit(
+      'EMPLOYEE_TRANSFER',
+      employee,
+      `Transfer: ${employee.fullName} (${employee.empId}) ${oldOffice ? oldOffice.name : '-'} -> ${newOffice.name}${reason ? `. Reason: ${reason}` : ''}`
+    );
+    sendToEmployee(employee.id, 'profile-updated', {}); // employee ka app naya branch turant le le
+    res.json(employee);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/employees/:id/status - ID activate / deactivate (profile bani rehti hai)
 router.put('/:id/status', async (req, res) => {
   try {
@@ -109,6 +185,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Pehle uske records, phir profile
+    await EmployeeDocument.deleteMany({ employeeId: employee.id });
     const [att, leaves, regs, exps] = await Promise.all([
       AttendanceRecord.deleteMany({ employeeId: employee.id }),
       LeaveRequest.deleteMany({ employeeId: employee.id }),

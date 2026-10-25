@@ -1,51 +1,67 @@
 import { useState } from 'react';
-import { LeaveRequest } from '../../types';
+import { LeaveRequest, LeaveBalance, LeaveKind } from '../../types';
 import { Calendar, Plus, CheckCircle, Clock, X, AlertCircle } from 'lucide-react';
 
 interface LeaveModuleProps {
   leaves: LeaveRequest[];
-  onApplyLeave: (newLeave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => void;
+  leaveBalance: LeaveBalance | null;
+  employeeId: string;
+  employeeName: string;
+  // Server mana kare (jaise leave kam hai) to error throw hota hai
+  onApplyLeave: (newLeave: Omit<LeaveRequest, 'id' | 'appliedAt' | 'status'>) => Promise<void>;
   onClose: () => void;
 }
 
-export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps) {
+const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+const KIND_INFO: Record<LeaveKind, { short: string; full: string; box: string; text: string }> = {
+  CASUAL: { short: 'Casual Leave (CL)', full: 'Casual Leave (CL)', box: 'bg-blue-50 border-blue-100', text: 'text-blue-600' },
+  SICK: { short: 'Sick Leave (SL)', full: 'Sick / Medical Leave (SL)', box: 'bg-emerald-50 border-emerald-100', text: 'text-emerald-600' },
+  EARNED: { short: 'Earned Leave (EL)', full: 'Earned / Privilege Leave (EL)', box: 'bg-violet-50 border-violet-100', text: 'text-violet-600' },
+};
+const KINDS = Object.keys(KIND_INFO) as LeaveKind[];
+
+export function LeaveModule({ leaves, leaveBalance, employeeId, employeeName, onApplyLeave, onClose }: LeaveModuleProps) {
   const [activeTab, setActiveTab] = useState<'balance' | 'apply' | 'history'>('balance');
-  const [leaveType, setLeaveType] = useState<LeaveRequest['leaveType']>('CASUAL');
-  const [startDate, setStartDate] = useState('2026-10-05');
-  const [endDate, setEndDate] = useState('2026-10-06');
+  const [leaveType, setLeaveType] = useState<LeaveKind>('CASUAL');
+  const [startDate, setStartDate] = useState(todayStr());
+  const [endDate, setEndDate] = useState(todayStr());
   const [isHalfDay, setIsHalfDay] = useState(false);
   const [reason, setReason] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Balances
-  const balances = {
-    CASUAL: { total: 12, used: 4, remaining: 8 },
-    SICK: { total: 10, used: 2, remaining: 8 },
-    EARNED: { total: 15, used: 3, remaining: 12 },
-    COMP_OFF: { total: 3, used: 1, remaining: 2 },
-  };
+  // Server se aaya asli balance: bachi hui = quota - li hui - pending
+  const left = (k: LeaveKind) => leaveBalance?.balances[k]?.remaining;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) return;
-
-    onApplyLeave({
-      employeeId: 'emp_001',
-      employeeName: 'Avanish Dhake',
-      leaveType,
-      startDate,
-      endDate,
-      daysCount: isHalfDay ? 0.5 : 2,
-      isHalfDay,
-      reason,
-    });
-
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setActiveTab('history');
-      setReason('');
-    }, 1200);
+    if (!reason.trim() || busy || submitted) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await onApplyLeave({
+        employeeId,
+        employeeName,
+        leaveType,
+        startDate,
+        endDate: isHalfDay ? startDate : endDate,
+        daysCount: isHalfDay ? 0.5 : 1, // asli din server ginta hai
+        isHalfDay,
+        reason,
+      });
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        setActiveTab('balance');
+        setReason('');
+      }, 1400);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Leave apply nahi ho paayi');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -107,36 +123,32 @@ export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps)
         <div className="p-5 overflow-y-auto space-y-4">
           {activeTab === 'balance' && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 space-y-1">
-                  <div className="text-[11px] font-semibold text-blue-600 uppercase">Casual Leave (CL)</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{balances.CASUAL.remaining}</div>
-                  <div className="text-[10px] text-slate-500">Used {balances.CASUAL.used} of {balances.CASUAL.total} days</div>
-                </div>
-
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 space-y-1">
-                  <div className="text-[11px] font-semibold text-emerald-600 uppercase">Sick Leave (SL)</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{balances.SICK.remaining}</div>
-                  <div className="text-[10px] text-slate-500">Used {balances.SICK.used} of {balances.SICK.total} days</div>
-                </div>
-
-                <div className="bg-violet-50 border border-violet-100 rounded-xl p-3.5 space-y-1">
-                  <div className="text-[11px] font-semibold text-violet-600 uppercase">Earned Leave (EL)</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{balances.EARNED.remaining}</div>
-                  <div className="text-[10px] text-slate-500">Used {balances.EARNED.used} of {balances.EARNED.total} days</div>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5 space-y-1">
-                  <div className="text-[11px] font-semibold text-amber-600 uppercase">Comp-Off</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{balances.COMP_OFF.remaining}</div>
-                  <div className="text-[10px] text-slate-500">Used {balances.COMP_OFF.used} of {balances.COMP_OFF.total} days</div>
-                </div>
+              <div className="grid grid-cols-3 gap-3">
+                {KINDS.map((k) => {
+                  const b = leaveBalance?.balances[k];
+                  const info = KIND_INFO[k];
+                  return (
+                    <div key={k} className={`${info.box} border rounded-xl p-3 space-y-1`}>
+                      <div className={`text-[10px] font-semibold uppercase ${info.text}`}>{info.short}</div>
+                      <div className="text-2xl font-bold text-slate-900 font-mono">{b ? b.remaining : '—'}</div>
+                      <div className="text-[10px] text-slate-500">
+                        {b ? `${b.remaining} bachi / ${b.total} total` : 'Loading…'}
+                      </div>
+                      {b && (b.used > 0 || b.pending > 0) && (
+                        <div className="text-[10px] text-slate-500">
+                          Li: {b.used}
+                          {b.pending > 0 && ` · Pending: ${b.pending}`}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="bg-sky-50 border border-sky-100 rounded-xl p-3 text-xs text-slate-600 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <span>
-                  Unapproved absences or exhaust of paid leaves automatically result in Loss of Pay (LOP) adjustments in the monthly payroll run.
+                  Leave apply karte hi bachi hui leave me se kam ho jaati hai. Reject hone par wapas mil jaati hai. Quota khatam hone par leave apply nahi hogi.
                 </span>
               </div>
 
@@ -156,14 +168,14 @@ export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps)
                 <label className="block text-slate-700 font-medium mb-1">Leave Category</label>
                 <select
                   value={leaveType}
-                  onChange={(e) => setLeaveType(e.target.value as any)}
+                  onChange={(e) => setLeaveType(e.target.value as LeaveKind)}
                   className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="CASUAL">Casual Leave (CL) - 8 Remaining</option>
-                  <option value="SICK">Sick / Medical Leave (SL) - 8 Remaining</option>
-                  <option value="EARNED">Earned / Privilege Leave (EL) - 12 Remaining</option>
-                  <option value="COMP_OFF">Compensatory Off (Comp-Off) - 2 Remaining</option>
-                  <option value="UNPAID">Leave Without Pay (LWP / LOP)</option>
+                  {KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {KIND_INFO[k].full} - {left(k) ?? '—'} Remaining
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -173,7 +185,10 @@ export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps)
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      if (endDate < e.target.value) setEndDate(e.target.value);
+                    }}
                     className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-emerald-500"
                     required
                   />
@@ -182,7 +197,9 @@ export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps)
                   <label className="block text-slate-700 font-medium mb-1">To Date</label>
                   <input
                     type="date"
-                    value={endDate}
+                    value={isHalfDay ? startDate : endDate}
+                    disabled={isHalfDay}
+                    min={startDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full bg-white border border-emerald-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-emerald-500"
                     required
@@ -215,13 +232,20 @@ export function LeaveModule({ leaves, onApplyLeave, onClose }: LeaveModuleProps)
                 />
               </div>
 
+              {error && (
+                <div className="flex items-start gap-2 text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-[11px]">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={submitted}
+                disabled={submitted || busy}
                 className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/30"
               >
                 {submitted ? <CheckCircle className="w-4 h-4 text-white" /> : <Clock className="w-4 h-4" />}
-                <span>{submitted ? 'Request Submitted for Manager Approval' : 'Submit Leave Request'}</span>
+                <span>{submitted ? 'Request Submitted for Manager Approval' : busy ? 'Bhej raha hai…' : 'Submit Leave Request'}</span>
               </button>
             </form>
           )}

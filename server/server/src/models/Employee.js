@@ -24,9 +24,40 @@ const EmployeeSchema = new mongoose.Schema({
   hraMonthly: Number,
   specialAllowanceMonthly: Number,
   bankAccount: String,
+  bankName: String,
   ifsc: String,
   pan: String,
+  aadhaar: String,
   uan: String,
+  // Padhai ki details (certificate file EmployeeDocument me alag se save hoti hai)
+  education: [{
+    _id: false,
+    degree: String,
+    institute: String,
+    year: String,
+  }],
+  // Joining ka tareeka: TRAINING (training period) ya DIRECT (seedha working)
+  workMode: { type: String, enum: ['TRAINING', 'DIRECT'], default: 'DIRECT' },
+  trainingMonths: Number,
+  trainingStipendMonthly: Number,
+  trainingEndDate: String,
+  // Saal bhar ki fix leave (khali ho to default: CASUAL 12, SICK 10, EARNED 15)
+  leaveQuota: {
+    CASUAL: Number,
+    SICK: Number,
+    EARNED: Number,
+  },
+  // Ek branch se doosre me transfer ka record
+  transferHistory: [{
+    _id: false,
+    date: String,
+    fromOfficeId: String,
+    fromOfficeName: String,
+    toOfficeId: String,
+    toOfficeName: String,
+    reason: String,
+  }],
+  deactivationReason: String,
   currentLat: Number,
   currentLng: Number,
   accuracyMeters: Number,

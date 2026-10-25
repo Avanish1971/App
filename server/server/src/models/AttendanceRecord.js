@@ -11,6 +11,10 @@ const AttendanceEventSchema = new mongoose.Schema({
 }, { _id: false });
 
 const ClientVisitSchema = new mongoose.Schema({
+  visitId: String,
+  contactPerson: String,
+  contactPhone: String,
+  accuracy: Number,
   clientName: String,
   clientLocation: String,
   purpose: String,
@@ -51,7 +55,8 @@ const AttendanceRecordSchema = new mongoose.Schema({
   lastLng: Number,
   lastDistanceMeters: Number,
   insideGeofence: Boolean,
-  clientVisit: ClientVisitSchema,
+  clientVisit: ClientVisitSchema, // sabse latest visit
+  clientVisits: [ClientVisitSchema], // aaj ke saare visits
   events: [AttendanceEventSchema],
 }, { timestamps: true, versionKey: false });
 

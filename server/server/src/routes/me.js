@@ -26,7 +26,8 @@ router.get('/', async (req, res) => {
       AttendanceRecord.findOne({ employeeId: emp.id, date: todayIST() }).lean(),
       LeaveRequest.find({ employeeId: emp.id }).sort({ appliedAt: -1 }).lean(),
     ]);
-    const leaveBalance = await getBalance(emp, todayIST().slice(0, 4));
+    // Leave balance me kuch bhi gadbad ho to bhi attendance wala app load hona nahi rukna chahiye
+    const leaveBalance = await getBalance(emp, todayIST().slice(0, 4)).catch(() => null);
     res.json({ employee: emp, office: office || null, shift: shift || null, attendance: attendance || null, leaves, leaveBalance });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -16,6 +16,7 @@ import { useGeofenceTracking } from './components/mobile/useGeofenceTracking';
 import { useLiveEvents } from './lib/realtime';
 import { UpdateBanner } from './components/UpdateBanner.tsx';
 import { MessageInbox } from './components/mobile/MessageInbox';
+import { LocationSetupGate, isNativeApp } from './components/mobile/LocationSetupGate';
 
 // Server bhi India (IST) ki date use karta hai
 const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -132,6 +133,12 @@ export default function MobileApp() {
     }
   });
 
+  // Phone app me: pehle location permission + GPS ON hona zaroori (install ke baad pehli baar bhi). Browser me skip.
+  const [locationReady, setLocationReady] = useState(() => !isNativeApp());
+  if (!locationReady) {
+    return <LocationSetupGate onReady={() => setLocationReady(true)} />;
+  }
+
   // ---- Login nahi hai ----
   if (!authed) {
     return (
@@ -209,6 +216,7 @@ export default function MobileApp() {
         onUpdateAttendance={handleUpdateAttendance}
         onApplyLeave={handleApplyLeave}
         onApplyRegularization={handleApplyRegularization}
+        onClientVisitSaved={handleLiveRecord}
         onLogout={logout}
       />
       <MessageInbox enabled={authed} />

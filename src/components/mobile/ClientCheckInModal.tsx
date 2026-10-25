@@ -21,7 +21,7 @@ import { submitClientVisitApi } from '../../lib/api';
 import { compressImage } from '../../lib/image';
 
 interface ClientCheckInModalProps {
-  onSaved: (record: AttendanceRecord) => void;
+  onSaved?: (record: AttendanceRecord) => void;
   onClose: () => void;
 }
 
@@ -117,6 +117,7 @@ export function ClientCheckInModal({ onSaved, onClose }: ClientCheckInModalProps
   const [sitePhoto, setSitePhoto] = useState<Photo | null>(null);
   const [gps, setGps] = useState<GpsState>({ status: 'loading' });
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState<{ client: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Abhi ki live location lo (modal khulte hi)
@@ -170,13 +171,41 @@ export function ClientCheckInModal({ onSaved, onClose }: ClientCheckInModalProps
         sitePhotoBase64: sitePhoto.base64,
         sitePhotoMime: sitePhoto.mime,
       });
-      onSaved(record);
-      onClose();
+      // Visit server par save ho chuka hai. Screen refresh me kuch gadbad ho to bhi user ko error mat dikhao.
+      try {
+        if (typeof onSaved === 'function') onSaved(record);
+      } catch (e) {
+        console.error('Attendance refresh fail:', e);
+      }
+      // Success message dikhao, thodi der baad form band
+      setDone({ client: clientName.trim() });
+      setSubmitting(false);
+      setTimeout(onClose, 2200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Visit save nahi ho paaya');
       setSubmitting(false);
     }
   };
+
+  // Save ho gaya: success screen
+  if (done) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
+            <CheckCircle2 className="w-9 h-9 text-emerald-600" />
+          </div>
+          <h3 className="font-extrabold text-slate-900 text-base">Visit Submit Ho Gaya ✓</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            <strong>{done.client}</strong> ka visit aur aapki attendance (PRESENT – On-Duty) save ho gayi hai. Admin ko aapki location, selfie aur details dikh rahi hain.
+          </p>
+          <button onClick={onClose} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs">
+            Theek hai
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/30 backdrop-blur-sm p-4 overflow-y-auto">

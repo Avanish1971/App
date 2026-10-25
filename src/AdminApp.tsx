@@ -351,7 +351,22 @@ export default function AdminApp() {
       );
     }
 
-    if (data.reason === 'LATE_MARK') {
+    if (data.reason === 'SIGNAL_LOST') {
+      pushToast({
+        kind: 'absent',
+        title: `${name} ki location nahi aa rahi`,
+        detail: 'App band ya phone ki location off ho sakti hai. Roster me NO SIGNAL dikhega.',
+      });
+    } else if (data.reason === 'SIGNAL_RESTORED') {
+      pushToast({ kind: 'present', title: `${name} ki location wapas aa gayi` });
+    } else if (data.reason === 'CLIENT_VISIT') {
+      const v = rec.clientVisit;
+      pushToast({
+        kind: 'present',
+        title: `${name} client visit par: ${v ? v.clientName : ''}`,
+        detail: v ? `${v.clientLocation} · Field Visits me photos dekho` : undefined,
+      });
+    } else if (data.reason === 'LATE_MARK') {
       pushToast({ kind: 'late', title: `${name} abhi tak office nahi aaya`, detail: 'Shift time nikal gaya: LATE mark ho gaya' });
     } else if (rec.status === 'PRESENT' && prev?.status !== 'PRESENT') {
       pushToast(

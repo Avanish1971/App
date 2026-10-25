@@ -15,7 +15,7 @@ export interface LivePosition {
   accuracy: number;
 }
 
-export type LocationStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+export type LocationStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'gpsoff' | 'unavailable';
 
 const SEND_EVERY_MS = 30000; // server ko har 30 second me location bhejo
 const NO_FIX_AFTER_MS = 90000; // itni der koi location na aaye to "location band/GPS nahi" maano
@@ -59,7 +59,9 @@ export function useGeofenceTracking(employeeId: string | null, onRecord: (record
     const handleError = (code: string, message: string) => {
       if (cancelled) return;
       const msg = `${code} ${message}`.toLowerCase();
-      setStatus(msg.includes('not_authorized') || msg.includes('denied') || msg.includes('permission') ? 'denied' : 'unavailable');
+      if (msg.includes('services disabled') || msg.includes('not enabled')) setStatus('gpsoff'); // phone ka GPS band
+      else if (msg.includes('not_authorized') || msg.includes('denied') || msg.includes('permission')) setStatus('denied');
+      else setStatus('unavailable');
     };
 
     async function start() {

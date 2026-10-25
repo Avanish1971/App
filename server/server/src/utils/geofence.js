@@ -93,12 +93,18 @@ async function processPingInner(employeeId, ping) {
   );
 
   record.lastPingAt = new Date();
+  // Signal wapas aa gaya
+  const restored = Boolean(record.signalLost);
+  if (restored) {
+    record.signalLost = false;
+    record.events.push(newEvent('SIGNAL_RESTORED', lat, lng, accuracy, 'Location wapas aane lagi'));
+  }
   record.lastLat = lat;
   record.lastLng = lng;
   record.lastDistanceMeters = dist;
   record.insideGeofence = inside;
 
-  const base = { record, inside, distanceMeters: dist, officeName: office.name };
+  const base = { record, inside, distanceMeters: dist, officeName: office.name, restored };
 
   // GPS kamzor hai -> sirf location save, status mat badlo
   if (accuracy > policy.gpsAccuracyMaxMeters) {
@@ -159,6 +165,7 @@ async function processPing(employeeId, ping) {
   if (result && result.record) {
     const rec = result.record;
     broadcastAdmin('attendance', {
+      reason: result.restored ? 'SIGNAL_RESTORED' : undefined,
       record: typeof rec.toObject === 'function' ? rec.toObject() : rec,
       location: {
         employeeId,
@@ -252,12 +259,60 @@ async function markNoShowsLate() {
   return count;
 }
 
+// Kuch minute se location nahi aa rahi (app band / phone off / location band) -> admin ko turant batao.
+// Attendance status yahan nahi badalta; sirf alert + event record hota hai.
+const SIGNAL_LOST_MINUTES = Number(process.env.SIGNAL_LOST_MINUTES) || 5;
+async function checkSignalLost() {
+  const cutoff = new Date(Date.now() - SIGNAL_LOST_MINUTES * 60000);
+  const nowMin = minutesNowIST();
+  const records = await AttendanceRecord.find({
+    date: todayIST(),
+    signalLost: { $ne: true },
+    lastPingAt: { $lt: cutoff },
+    status: { $in: ['SCHEDULED', 'PRESENT', 'ON_BREAK', 'ON_DUTY'] },
+  }).lean();
+  if (records.length === 0) return 0;
+
+  const shifts = await Shift.find().lean();
+  let count = 0;
+  for (const r of records) {
+    // Sirf shift ke time me alert (shift se pehle/baad phone band hona normal hai)
+    const shift = shifts.find((s) => s.id === r.shiftId);
+    if (shift && !shift.isOvernight) {
+      const start = parseClock(shift.startTime);
+      const end = parseClock(shift.endTime);
+      if (start !== null && nowMin < start - 30) continue;
+      if (end !== null && nowMin >= end) continue;
+    }
+    const lastSeen = r.lastPingAt
+      ? new Date(r.lastPingAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
+      : '';
+    const updated = await AttendanceRecord.findOneAndUpdate(
+      { id: r.id, signalLost: { $ne: true } },
+      {
+        $set: { signalLost: true },
+        $push: {
+          events: newEvent('SIGNAL_LOST', r.lastLat, r.lastLng, 0,
+            `${SIGNAL_LOST_MINUTES}+ min se location nahi aa rahi (last: ${lastSeen}). App band ya location off ho sakti hai`),
+        },
+      },
+      { new: true }
+    );
+    if (updated) {
+      broadcastAdmin('attendance', { record: updated.toObject(), reason: 'SIGNAL_LOST' });
+      count += 1;
+    }
+  }
+  return count;
+}
+
 function startSweeper() {
   setInterval(() => {
     sweepExpiredExits().catch((err) => console.error('Geofence sweeper error:', err.message));
     markNoShowsLate().catch((err) => console.error('Late sweeper error:', err.message));
+    checkSignalLost().catch((err) => console.error('Signal sweeper error:', err.message));
   }, 60000);
   console.log('Geofence sweeper chalu (har 60 sec)');
 }
 
-module.exports = { processPing, sweepExpiredExits, markNoShowsLate, startSweeper };
+module.exports = { processPing, sweepExpiredExits, markNoShowsLate, checkSignalLost, startSweeper };

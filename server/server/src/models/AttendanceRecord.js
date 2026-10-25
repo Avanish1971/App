@@ -51,6 +51,7 @@ const AttendanceRecordSchema = new mongoose.Schema({
   // Geofence tracking (server khud bharta hai)
   outsideSince: Date,
   lastPingAt: Date,
+  signalLost: Boolean, // true = kuch minute se location nahi aa rahi (app band / location band)
   lastLat: Number,
   lastLng: Number,
   lastDistanceMeters: Number,

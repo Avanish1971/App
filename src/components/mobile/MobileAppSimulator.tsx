@@ -11,6 +11,7 @@ import {
 } from '../../types';
 import { validateGeofence, formatDistance } from '../../utils/geo';
 import { PayslipViewer } from './PayslipViewer';
+import { openLocationSettings } from './useGeofenceTracking';
 import { LeaveModule } from './LeaveModule';
 import { RegularizationModal } from './RegularizationModal';
 import { OfflineQueueModal } from './OfflineQueueModal';
@@ -45,7 +46,7 @@ interface MobileAppSimulatorProps {
   onLogout: () => void;
   // Phone ki live GPS location (None ho to abhi location nahi mili)
   livePosition?: { latitude: number; longitude: number; accuracy: number } | null;
-  locationStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+  locationStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'gpsoff' | 'unavailable';
 }
 
 export function MobileAppSimulator({
@@ -87,6 +88,8 @@ export function MobileAppSimulator({
   const locationMessage =
     locationStatus === 'denied'
       ? 'Location permission band hai. Phone Settings me is app ko Location allow karo.'
+      : locationStatus === 'gpsoff'
+        ? 'Phone ki Location (GPS) band hai. Upar se screen neeche kheench kar Location ON karo.'
       : locationStatus === 'unavailable'
         ? 'GPS available nahi hai. Location (GPS) ON karo.'
         : 'Thodi der ruko, aapki location dhoondh rahe hain…';
@@ -232,6 +235,11 @@ export function MobileAppSimulator({
             <div>
               <div className="font-bold">{!hasFix ? 'Location detect ho rahi hai…' : geoResult.isInside ? 'Location Verified Inside Geofence' : 'Office geofence ke bahar'}</div>
               <div className="text-[10px] text-slate-600 opacity-90">{hasFix ? geoResult.message : locationMessage}</div>
+              {!hasFix && (locationStatus === 'denied' || locationStatus === 'gpsoff' || locationStatus === 'unavailable') && (
+                <button onClick={() => openLocationSettings()} className="mt-1.5 text-[10px] font-bold text-indigo-700 underline">
+                  Settings kholo
+                </button>
+              )}
             </div>
           </div>
         </div>

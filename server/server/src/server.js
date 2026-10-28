@@ -24,10 +24,12 @@ const eventsRouter = require('./routes/events');
 const { requireRole, attendanceGuard, requestsGuard, tenantScope } = require('./middleware/auth');
 const { migrate } = require('./utils/migrate');
 
-const app = express();
+// const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
+// app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
 // Document upload ke liye bada body chahiye (sirf us route par); baaki sab jagah chhota limit
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips)|me\/client-visits|company)/;
 const smallJson = express.json();
 app.use((req, res, next) => (DOC_ROUTE.test(req.path) ? next() : smallJson(req, res, next)));

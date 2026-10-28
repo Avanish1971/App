@@ -27,6 +27,8 @@ import {
 import type { OfficeInput } from './lib/api';
 import { clearToken, getToken, isTokenValid, AUTH_EXPIRED_EVENT } from './lib/auth';
 import { useLiveEvents } from './lib/realtime';
+import { useCompany } from './lib/useCompany';
+import { CompanyProfileModal } from './components/admin/CompanyProfileModal';
 import { PendingDocument, DOC_TYPE_LABELS, readFileAsBase64 } from './lib/files';
 import { LiveToasts, LiveToast } from './components/admin/LiveToasts';
 import {
@@ -379,6 +381,9 @@ export default function AdminApp() {
     }
   });
 
+  const { name: companyName, logoUrl: companyLogo } = useCompany();
+  const [showCompany, setShowCompany] = useState(false);
+
   // Login nahi hai to sirf login page
   if (!authed) {
     return (
@@ -432,13 +437,22 @@ export default function AdminApp() {
       <UpdateBanner />
       {/* Locked Clean Web Header - No Mode Switchers / No Simulators */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-600/30">
-            G
-          </div>
+        <div
+          className="flex items-center gap-3 cursor-pointer rounded-xl hover:bg-slate-50 -ml-2 pl-2 pr-3 py-1 transition-colors"
+          onClick={() => setShowCompany(true)}
+          title="Company profile (naam, logo, Company Code)"
+          role="button"
+        >
+          {companyLogo ? (
+            <img src={companyLogo} alt={companyName} className="h-9 max-w-[120px] object-contain" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-600/30">
+              {(companyName || 'G').charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-slate-900 text-base tracking-tight">GeoAttend HRMS Console</span>
+              <span className="font-extrabold text-slate-900 text-base tracking-tight">{companyName ? `${companyName} · HRMS Console` : 'GeoAttend HRMS Console'}</span>
               <span className="hidden sm:inline-block text-[10px] font-mono text-cyan-600 bg-cyan-50 border border-cyan-200 px-1.5 py-0.2 rounded font-bold">
                 MANAGEMENT
               </span>
@@ -495,6 +509,7 @@ export default function AdminApp() {
           onLogout={handleLogout}
         />
       </main>
+      {showCompany && <CompanyProfileModal onClose={() => setShowCompany(false)} />}
       <LiveToasts toasts={toasts} onDismiss={(id) => setToasts((p) => p.filter((x) => x.id !== id))} />
     </div>
   );

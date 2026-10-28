@@ -12,4 +12,6 @@ const AuditLogEntrySchema = new mongoose.Schema({
   ipAddress: String,
 }, { timestamps: true, versionKey: false });
 
+AuditLogEntrySchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('AuditLogEntry', AuditLogEntrySchema);

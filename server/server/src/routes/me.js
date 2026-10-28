@@ -7,6 +7,7 @@ const AttendanceRecord = require('../models/AttendanceRecord');
 const LeaveRequest = require('../models/LeaveRequest');
 const Message = require('../models/Message');
 const ClientVisit = require('../models/ClientVisit');
+const SalarySlip = require('../models/SalarySlip');
 const { forEmployee } = require('./messages');
 const { todayIST, nowTimeIST } = require('../utils/time');
 const { getBalance } = require('../utils/leaveBalance');
@@ -148,6 +149,27 @@ router.post('/client-visits', async (req, res) => {
     broadcastAdmin('attendance', { record: rec.toObject(), reason: 'CLIENT_VISIT' });
     broadcastAdmin('client-visit', meta);
     res.status(201).json({ record: rec.toObject(), visit: meta });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/me/salary-slips -> sirf meri (admin ki upload ki hui) salary slips
+router.get('/salary-slips', async (req, res) => {
+  try {
+    const list = await SalarySlip.find({ employeeId: req.auth.employeeId }, '-data').sort({ month: -1 }).lean();
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/salary-slips/:slipId/file', async (req, res) => {
+  try {
+    const s = await SalarySlip.findOne({ id: req.params.slipId, employeeId: req.auth.employeeId });
+    if (!s) return res.status(404).json({ error: 'Salary slip nahi mili' });
+    res.set({ 'Content-Type': s.mimeType, 'Content-Length': s.data.length, 'X-Content-Type-Options': 'nosniff' });
+    res.send(s.data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

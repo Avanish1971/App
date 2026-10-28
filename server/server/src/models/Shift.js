@@ -12,4 +12,6 @@ const ShiftSchema = new mongoose.Schema({
   isOvernight: Boolean,
 }, { timestamps: true, versionKey: false });
 
+ShiftSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('Shift', ShiftSchema);

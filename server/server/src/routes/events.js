@@ -6,7 +6,7 @@ const { addClient, write } = require('../utils/realtime');
 // GET /api/events?token=...  -> live stream (EventSource header nahi bhej sakta, isliye token URL me)
 router.get('/', (req, res) => {
   const auth = verify(String(req.query.token || ''));
-  if (!auth || !['admin', 'employee'].includes(auth.role)) {
+  if (!auth || !auth.companyId || !['admin', 'employee'].includes(auth.role)) {
     return res.status(401).json({ error: 'Login zaroori hai' });
   }
 
@@ -19,12 +19,13 @@ router.get('/', (req, res) => {
   res.flushHeaders();
   res.write('retry: 3000\n\n');
 
-  const client = { res, role: auth.role, employeeId: auth.employeeId };
+  const client = { res, role: auth.role, employeeId: auth.employeeId, companyId: auth.companyId };
   const remove = addClient(client);
   write(client, 'hello', { role: auth.role });
 
   // Token expire hote hi connection band, taaki client dobara login kare
-  const ttl = Math.max(1000, auth.exp * 1000 - Date.now());
+  // (setTimeout 24.8 din se lamba delay nahi sambhalta, isliye limit lagayi)
+  const ttl = Math.min(Math.max(1000, auth.exp * 1000 - Date.now()), 2000000000);
   const killer = setTimeout(() => res.end(), ttl);
 
   req.on('close', () => {

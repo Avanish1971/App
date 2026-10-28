@@ -6,6 +6,7 @@ import { TransferEmployeeModal } from './TransferEmployeeModal';
 import { EmployeeDocuments } from './EmployeeDocuments';
 import { LeaveBalanceCard } from './LeaveBalanceCard';
 import { FieldVisitList } from './FieldVisitList';
+import { SalarySlipsCard } from './SalarySlipsCard';
 import { getEmployeeAttendanceApi } from '../../lib/api';
 import { formatINR } from '../../utils/payroll';
 import { didCome, currentMonthIST } from './MonthlyAttendanceReport';
@@ -33,6 +34,7 @@ import {
   CalendarDays,
   History,
   Route,
+  Receipt,
 } from 'lucide-react';
 
 interface EmployeeDirectoryProps {
@@ -422,6 +424,13 @@ export function EmployeeDirectory({
             <div className="lg:col-span-2">
               <Card title="Documents (दस्तावेज़) — Aadhaar, PAN, Bank, Education" icon={FileText}>
                 <EmployeeDocuments employee={employee} />
+              </Card>
+            </div>
+
+            {/* Salary slips (admin upload karta hai, employee ke app me tabhi dikhti hai) */}
+            <div className="lg:col-span-2">
+              <Card title="Salary Slips (वेतन पर्ची) — upload karo, employee app me dikhegi" icon={Receipt}>
+                <SalarySlipsCard employee={employee} />
               </Card>
             </div>
 

@@ -21,3 +21,27 @@ export async function compressImage(file: File, maxSide = 1000, quality = 0.7): 
     URL.revokeObjectURL(url);
   }
 }
+
+// Company logo: max 400px, PNG (transparent background bacha rehta hai)
+export async function compressLogo(file: File, maxSide = 400): Promise<{ base64: string; mime: string; previewUrl: string }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Logo khul nahi paaya'));
+      el.src = url;
+    });
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Logo process nahi ho paaya');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/png');
+    return { base64: dataUrl.split(',')[1] || '', mime: 'image/png', previewUrl: dataUrl };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

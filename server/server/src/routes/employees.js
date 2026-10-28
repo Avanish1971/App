@@ -42,6 +42,7 @@ const RegularizationRequest = require('../models/RegularizationRequest');
 const ExpenseClaim = require('../models/ExpenseClaim');
 const AuditLogEntry = require('../models/AuditLogEntry');
 const EmployeeDocument = require('../models/EmployeeDocument');
+const SalarySlip = require('../models/SalarySlip');
 const Office = require('../models/Office');
 const Shift = require('../models/Shift');
 const { getBalance } = require('../utils/leaveBalance');
@@ -186,6 +187,7 @@ router.delete('/:id', async (req, res) => {
 
     // Pehle uske records, phir profile
     await EmployeeDocument.deleteMany({ employeeId: employee.id });
+    await SalarySlip.deleteMany({ employeeId: employee.id });
     const [att, leaves, regs, exps] = await Promise.all([
       AttendanceRecord.deleteMany({ employeeId: employee.id }),
       LeaveRequest.deleteMany({ employeeId: employee.id }),

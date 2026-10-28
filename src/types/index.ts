@@ -361,3 +361,23 @@ export interface InboxMessage {
   sentAt: string;
   read: boolean;
 }
+
+// ---- Salary slip (admin upload karta hai) ----
+export interface SalarySlip {
+  id: string;
+  employeeId: string;
+  month: string; // YYYY-MM
+  fileName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+}
+
+// ---- Company naam + logo ----
+export interface CompanyInfo {
+  name: string;
+  code?: string; // employees login ke time ye Company Code dalte hain
+  empPrefix?: string;
+  hasLogo: boolean;
+  updatedAt: string;
+}

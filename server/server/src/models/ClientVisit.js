@@ -22,4 +22,6 @@ const ClientVisitSchema = new mongoose.Schema({
   visitedAt: String, // ISO
 }, { timestamps: true, versionKey: false });
 
+ClientVisitSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('ClientVisit', ClientVisitSchema);

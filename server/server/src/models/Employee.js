@@ -63,4 +63,6 @@ const EmployeeSchema = new mongoose.Schema({
   accuracyMeters: Number,
 }, { timestamps: true, versionKey: false });
 
+EmployeeSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('Employee', EmployeeSchema);

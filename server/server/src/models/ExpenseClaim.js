@@ -12,4 +12,6 @@ const ExpenseClaimSchema = new mongoose.Schema({
   status: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },
 }, { timestamps: true, versionKey: false });
 
+ExpenseClaimSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('ExpenseClaim', ExpenseClaimSchema);

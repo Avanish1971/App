@@ -184,8 +184,6 @@ export function AttendanceRoster({
               <th className="py-3 px-4">Check-In</th>
               <th className="py-3 px-4">Working Hours</th>
               <th className="py-3 px-4">Verification</th>
-              <th className="py-3 px-4">App Access (आईडी स्थिति)</th>
-              <th className="py-3 px-4 text-right">Audit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-slate-700">
@@ -331,63 +329,9 @@ export function AttendanceRoster({
                     </td>
 
                     {/* App Access / ID Deactivate Action (User Request) */}
-                    <td className="py-3 px-4">
-                      {emp.status === 'INACTIVE' ? (
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                            <UserX className="w-3 h-3 text-rose-600" />
-                            <span>निष्क्रिय (Blocked)</span>
-                          </span>
-                          <div className="text-[9px] text-rose-600 truncate max-w-[130px]" title={emp.deactivationReason || 'Company Left'}>
-                            {emp.deactivationReason || 'Left Company'}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setEmployeeToDeactivate(emp)}
-                            className="text-[10px] text-emerald-600 hover:text-emerald-700 underline font-semibold block"
-                          >
-                            पुनः सक्रिय करें
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>सक्रिय (Active)</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setEmployeeToDeactivate(emp)}
-                            className="text-[10px] text-rose-600 hover:text-rose-700 underline font-medium flex items-center gap-1"
-                            title="कंपनी छोड़ने पर आईडी डिएक्टिवेट करें ताकि लॉगिन बंद हो"
-                          >
-                            <UserX className="w-2.5 h-2.5" />
-                            <span>आईडी डीएक्टिवेट करें</span>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-
+                    
                     {/* Audit Action */}
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => onViewEmployeeAudit(emp, record)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                          title="View Audit Trail"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setEmployeeToDelete(emp)}
-                          className="px-2 py-1 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1 transition-colors"
-                          title="Employee ki poori profile delete karo"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </td>
+                    
                   </tr>
                 );
               })

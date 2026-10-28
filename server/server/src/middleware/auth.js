@@ -1,9 +1,12 @@
 const { verify } = require('../utils/token');
 const Employee = require('../models/Employee');
+const { runWithTenant, tenantScope } = require('../utils/tenant');
 
 function readAuth(req) {
   const m = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
-  return m ? verify(m[1]) : null;
+  const auth = m ? verify(m[1]) : null;
+  // Purane token (company ke bina) ab nahi chalenge: dobara login karna hoga
+  return auth && auth.companyId ? auth : null;
 }
 
 // Login zaroori, aur role in me se koi ek ho
@@ -37,7 +40,7 @@ async function requestsGuard(req, res, next) {
   if (auth.role === 'admin') return next();
   if (auth.role === 'employee' && req.method === 'POST' && req.path === '/') {
     try {
-      const emp = await Employee.findOne({ id: auth.employeeId });
+      const emp = await runWithTenant(auth.companyId, async () => await Employee.findOne({ id: auth.employeeId }));
       if (!emp || emp.status === 'INACTIVE') return res.status(403).json({ error: 'Aapki ID band hai' });
       req.body = { ...(req.body || {}), employeeId: emp.id, employeeName: emp.fullName };
       return next();
@@ -48,4 +51,4 @@ async function requestsGuard(req, res, next) {
   return res.status(403).json({ error: 'Is kaam ki permission nahi hai' });
 }
 
-module.exports = { requireRole, attendanceGuard, requestsGuard };
+module.exports = { requireRole, attendanceGuard, requestsGuard, tenantScope };

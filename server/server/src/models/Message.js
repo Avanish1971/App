@@ -15,4 +15,6 @@ const MessageSchema = new mongoose.Schema({
 
 MessageSchema.index({ sentAt: -1 });
 
+MessageSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('Message', MessageSchema);

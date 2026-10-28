@@ -17,4 +17,6 @@ const EmployeeDocumentSchema = new mongoose.Schema({
   uploadedAt: String,
 }, { timestamps: true, versionKey: false });
 
+EmployeeDocumentSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('EmployeeDocument', EmployeeDocumentSchema);

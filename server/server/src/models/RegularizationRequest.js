@@ -12,4 +12,6 @@ const RegularizationRequestSchema = new mongoose.Schema({
   appliedAt: String,
 }, { timestamps: true, versionKey: false });
 
+RegularizationRequestSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('RegularizationRequest', RegularizationRequestSchema);

@@ -15,4 +15,6 @@ const LeaveRequestSchema = new mongoose.Schema({
   approvedBy: String,
 }, { timestamps: true, versionKey: false });
 
+LeaveRequestSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('LeaveRequest', LeaveRequestSchema);

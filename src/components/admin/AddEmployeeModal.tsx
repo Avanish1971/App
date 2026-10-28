@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
 import { PendingDocument } from '../../lib/files';
 import { FilePicker } from './FilePicker';
+import { useCompany } from '../../lib/useCompany';
 import {
   UserPlus,
   X,
@@ -66,6 +67,7 @@ function Section({ icon: Icon, title, children }: { icon: typeof Key; title: str
 }
 
 export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, onClose }: AddEmployeeModalProps) {
+  const { code: companyCode, empPrefix } = useCompany();
   // ---- Basic ----
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -120,7 +122,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
   const grossMonthly = basicMonthly + hra + special;
 
   const handleCopyCredentials = () => {
-    navigator.clipboard?.writeText(`Login ID: ${generatedLoginId}\nPassword: ${password}`);
+    navigator.clipboard?.writeText(`${companyCode ? `Company Code: ${companyCode}\n` : ''}Login ID: ${generatedLoginId}\nPassword: ${password}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -134,7 +136,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
     if (!fullName.trim()) return 'Employee ka naam likho';
     if (!email.trim()) return 'Email likho';
     if (!designation.trim()) return 'Post (Designation) likho';
-    if (!officeId) return 'Branch chuno';
+    if (!officeId) return offices.length === 0 ? 'Pehle sidebar me "Office Locations" me apni office/branch jodo, phir employee add karo' : 'Branch chuno';
     if (!(basicMonthly > 0)) return 'Salary (Basic) 0 se zyada honi chahiye';
     if (workMode === 'TRAINING') {
       if (!(trainingMonths >= 1 && trainingMonths <= 24)) return 'Training 1 se 24 mahine ke beech rakho';
@@ -166,7 +168,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
     const eduClean = education.filter((r) => r.degree.trim() || r.institute.trim() || r.file);
     const newEmp: Employee = {
       id: `emp_${String(n).padStart(3, '0')}`,
-      empId: `ACME-${nextNo}`,
+      empId: `${empPrefix}-${nextNo}`,
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim(),
@@ -521,7 +523,11 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
                 <span>{copied ? 'Copied!' : 'Copy'}</span>
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-3 gap-2 text-[11px]">
+              <div className="bg-slate-50 border border-slate-200 p-2 rounded-lg">
+                <div className="text-[10px] text-slate-500 font-medium">Company Code</div>
+                <div className="font-mono font-bold text-indigo-700 text-xs mt-0.5 tracking-wider">{companyCode || '—'}</div>
+              </div>
               <div className="bg-slate-50 border border-slate-200 p-2 rounded-lg">
                 <div className="text-[10px] text-slate-500 font-medium">Login ID</div>
                 <div className="font-mono font-bold text-cyan-700 text-xs mt-0.5">{generatedLoginId}</div>

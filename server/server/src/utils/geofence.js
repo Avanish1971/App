@@ -11,6 +11,8 @@ const { distanceMeters } = require('./geo');
 const { todayIST, nowTimeIST, minutesNowIST, parseClock } = require('./time');
 const LeaveRequest = require('../models/LeaveRequest');
 const { broadcastAdmin } = require('./realtime');
+const { runWithTenant } = require('./tenant');
+const Company = require('../models/Company');
 
 // In status wale employees ka attendance GPS se nahi badalta
 const PROTECTED_STATUSES = ['ON_LEAVE', 'WFH', 'ON_DUTY', 'ON_BREAK'];
@@ -111,8 +113,26 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
-  // Field staff aur leave/WFH/on-duty/break wale: status GPS se nahi badalta
-  if (employee.workType === 'FIELD_WORK' || PROTECTED_STATUSES.includes(record.status)) {
+  // Field staff: office ke radius me aaye to PRESENT lagao (late/absent GPS se nahi lagta).
+  // Office se bahar jaana = client ke paas jaana ho sakta hai, isliye bahar jaane par kabhi ABSENT nahi.
+  if (employee.workType === 'FIELD_WORK') {
+    if (inside && record.status === 'SCHEDULED') {
+      record.status = 'PRESENT';
+      record.verificationStatus = 'VERIFIED';
+      record.checkInTime = nowTimeIST();
+      record.checkInLat = lat;
+      record.checkInLng = lng;
+      record.checkInAccuracy = accuracy;
+      record.source = 'AUTO_GEOFENCE';
+      record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye (${dist}m door)`));
+      record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, 'Auto check-in (office): PRESENT'));
+    }
+    record.outsideSince = undefined;
+    await record.save();
+    return base;
+  }
+  // Leave/WFH/on-duty/break wale: status GPS se nahi badalta
+  if (PROTECTED_STATUSES.includes(record.status)) {
     await record.save();
     return { ...base, ignored: 'PROTECTED' };
   }
@@ -306,13 +326,28 @@ async function checkSignalLost() {
   return count;
 }
 
-function startSweeper() {
-  setInterval(() => {
-    sweepExpiredExits().catch((err) => console.error('Geofence sweeper error:', err.message));
-    markNoShowsLate().catch((err) => console.error('Late sweeper error:', err.message));
-    checkSignalLost().catch((err) => console.error('Signal sweeper error:', err.message));
-  }, 60000);
-  console.log('Geofence sweeper chalu (har 60 sec)');
+// Har minute: har company ke liye alag-alag (company ka data kabhi mix nahi hota)
+async function sweepAllCompanies() {
+  const companies = await Company.find({}, 'id').lean();
+  for (const c of companies) {
+    await runWithTenant(c.id, async () => {
+      await sweepExpiredExits().catch((err) => console.error('Geofence sweeper error:', err.message));
+      await markNoShowsLate().catch((err) => console.error('Late sweeper error:', err.message));
+      await checkSignalLost().catch((err) => console.error('Signal sweeper error:', err.message));
+    });
+  }
 }
 
-module.exports = { processPing, sweepExpiredExits, markNoShowsLate, checkSignalLost, startSweeper };
+function startSweeper() {
+  let running = false;
+  setInterval(() => {
+    if (running) return;
+    running = true;
+    sweepAllCompanies()
+      .catch((err) => console.error('Sweeper error:', err.message))
+      .finally(() => { running = false; });
+  }, 60000);
+  console.log('Geofence sweeper chalu (har 60 sec, har company ke liye)');
+}
+
+module.exports = { processPing, sweepExpiredExits, markNoShowsLate, checkSignalLost, sweepAllCompanies, startSweeper };

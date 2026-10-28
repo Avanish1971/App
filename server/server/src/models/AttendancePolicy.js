@@ -14,4 +14,6 @@ const AttendancePolicySchema = new mongoose.Schema({
   allowOfflineAttendance: Boolean,
 }, { timestamps: true, versionKey: false });
 
+AttendancePolicySchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('AttendancePolicy', AttendancePolicySchema);

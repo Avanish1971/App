@@ -1,26 +1,53 @@
-import { useState, FormEvent } from 'react';
-import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { employeeLoginApi } from '../../lib/api';
+import { useEffect, useState, FormEvent } from 'react';
+import { Lock, User, ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { employeeLoginApi, getPublicCompanyApi, companyLogoUrl } from '../../lib/api';
 import { setToken } from '../../lib/auth';
+import { getSavedCompanyCode, saveCompanyCode } from '../../lib/useCompany';
 
 interface MobileLoginScreenProps {
   onLoggedIn: () => void;
 }
 
 export function MobileLoginScreen({ onLoggedIn }: MobileLoginScreenProps) {
+  const [companyCode, setCompanyCode] = useState(getSavedCompanyCode());
+  const [brand, setBrand] = useState<{ name: string; logoUrl: string | null } | null>(null);
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Code likhte hi company ka naam aur logo dikha do
+  useEffect(() => {
+    const code = companyCode.trim().toUpperCase();
+    if (code.length < 4) {
+      setBrand(null);
+      return;
+    }
+    let alive = true;
+    const t = setTimeout(() => {
+      getPublicCompanyApi(code)
+        .then((c) => alive && setBrand({ name: c.name, logoUrl: c.hasLogo ? companyLogoUrl(code, c.updatedAt) : null }))
+        .catch(() => alive && setBrand(null));
+    }, 400);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [companyCode]);
+
+  const companyName = brand?.name || '';
+  const logoUrl = brand?.logoUrl || null;
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setLoading(true);
     try {
-      const { token } = await employeeLoginApi(loginId.trim(), password);
+      const code = companyCode.trim().toUpperCase();
+      const { token, company } = await employeeLoginApi(loginId.trim(), password, code);
       setToken('employee', token);
+      saveCompanyCode(company?.code || code); // agli baar code yaad rahe
       onLoggedIn();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Login nahi ho paaya');
@@ -32,11 +59,16 @@ export function MobileLoginScreen({ onLoggedIn }: MobileLoginScreenProps) {
     <div className="min-h-screen flex flex-col justify-center px-5 py-8 bg-gradient-to-b from-blue-50 via-white to-slate-50 text-slate-800 font-sans antialiased">
       <div className="w-full max-w-sm mx-auto space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center font-black text-white text-2xl shadow-xl shadow-blue-500/30">
-            G
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt={companyName} className="h-16 max-w-[220px] mx-auto object-contain" />
+          ) : (
+            <div className="w-16 h-16 mx-auto rounded-3xl bg-gradient-to-tr from-blue-500 to-emerald-500 flex items-center justify-center font-black text-white text-2xl shadow-xl shadow-blue-500/30">
+              {(companyName || 'G').charAt(0).toUpperCase()}
+            </div>
+          )}
+          {companyName && <div className="text-sm font-bold text-slate-700">{companyName}</div>}
           <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Employee Login</h1>
-          <p className="text-xs text-slate-500">Apni Login ID aur password daalo (HR se milta hai)</p>
+          <p className="text-xs text-slate-500">Company Code, Login ID aur password daalo (HR se milta hai)</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 space-y-4">
@@ -45,6 +77,23 @@ export function MobileLoginScreen({ onLoggedIn }: MobileLoginScreenProps) {
               {errorMsg}
             </div>
           )}
+
+          <div>
+            <label className="block text-xs text-slate-700 font-medium mb-1.5">Company Code</label>
+            <div className="relative">
+              <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-500" />
+              <input
+                type="text"
+                value={companyCode}
+                onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
+                placeholder="HR se milta hai (jaise K7P2QX)"
+                autoCapitalize="characters"
+                autoComplete="off"
+                maxLength={12}
+                className="w-full pl-10 pr-3 py-3 bg-white border border-blue-200 rounded-xl text-slate-900 text-sm font-mono tracking-widest focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
 
           <div>
             <label className="block text-xs text-slate-700 font-medium mb-1.5">Login ID</label>

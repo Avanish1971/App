@@ -64,4 +64,6 @@ const AttendanceRecordSchema = new mongoose.Schema({
 // One attendance record per employee per day
 AttendanceRecordSchema.index({ employeeId: 1, date: 1 }, { unique: true });
 
+AttendanceRecordSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('AttendanceRecord', AttendanceRecordSchema);

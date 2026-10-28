@@ -17,6 +17,8 @@ import {
   EmployeeDocType,
   LeaveBalance,
   ClientVisit,
+  SalarySlip,
+  CompanyInfo,
 } from '../types';
 import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
@@ -169,17 +171,25 @@ export const sendLocationPingApi = (
     body: JSON.stringify(ping),
   });
 
-// ---- Login ----
+// ---- Login / naya account ----
 export const adminLoginApi = (email: string, password: string) =>
-  request<{ token: string }>(
+  request<{ token: string; company: { name: string; code: string } }>(
     '/api/auth/admin-login',
     { method: 'POST', body: JSON.stringify({ email, password }) },
     false
   );
-export const employeeLoginApi = (loginId: string, password: string) =>
-  request<{ token: string; employee: { id: string; empId: string; fullName: string } }>(
+// Employee: companyCode optional (purane employees bina code ke bhi chal jate hain)
+export const employeeLoginApi = (loginId: string, password: string, companyCode?: string) =>
+  request<{ token: string; employee: { id: string; empId: string; fullName: string }; company?: { code: string; name: string } }>(
     '/api/auth/employee-login',
-    { method: 'POST', body: JSON.stringify({ loginId, password }) },
+    { method: 'POST', body: JSON.stringify({ loginId, password, companyCode: companyCode || undefined }) },
+    false
+  );
+// Naya customer apni company ka account khud banata hai aur wahi admin ban jata hai
+export const registerCompanyApi = (p: { companyName: string; email: string; password: string; logoBase64?: string; logoMime?: string }) =>
+  request<{ token: string; company: { name: string; code: string } }>(
+    '/api/auth/register',
+    { method: 'POST', body: JSON.stringify(p) },
     false
   );
 
@@ -287,3 +297,40 @@ export async function fetchClientVisitPhotoUrl(visitId: string, kind: 'selfie' |
   if (!res.ok) throw new Error('Photo nahi mili');
   return URL.createObjectURL(await res.blob());
 }
+
+// ---- Company naam + logo ----
+export const getCompanyApi = () => request<CompanyInfo>('/api/company'); // login ke baad: apni company
+export const getPublicCompanyApi = (code: string) =>
+  request<CompanyInfo>(`/api/company/public?code=${encodeURIComponent(code)}`, undefined, false); // login se pehle
+export const saveCompanyApi = (payload: { name: string; logoBase64?: string; logoMime?: string; removeLogo?: boolean }) =>
+  request<CompanyInfo>('/api/company', { method: 'PUT', body: JSON.stringify(payload) });
+export const companyLogoUrl = (code: string, updatedAt?: string) =>
+  `${BASE_URL}/api/company/logo?code=${encodeURIComponent(code)}&v=${encodeURIComponent(updatedAt || '')}`;
+
+// ---- Salary slips ----
+// Admin
+export const getEmployeeSalarySlipsApi = (employeeId: string) =>
+  request<SalarySlip[]>(`/api/employees/${employeeId}/salary-slips`);
+export const uploadSalarySlipApi = (
+  employeeId: string,
+  slip: { month: string; fileName: string; mimeType: string; dataBase64: string }
+) =>
+  request<SalarySlip>(`/api/employees/${employeeId}/salary-slips`, { method: 'POST', body: JSON.stringify(slip) });
+export const deleteSalarySlipApi = (employeeId: string, slipId: string) =>
+  request<{ ok: boolean }>(`/api/employees/${employeeId}/salary-slips/${slipId}`, { method: 'DELETE' });
+// Employee (sirf apni)
+export const getMySalarySlipsApi = () => request<SalarySlip[]>('/api/me/salary-slips');
+
+// Token ke saath file laao (blob)
+export async function fetchProtectedBlob(path: string): Promise<Blob> {
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'File nahi mil paayi');
+  }
+  return res.blob();
+}
+export const fetchEmployeeSalarySlipBlob = (employeeId: string, slipId: string) =>
+  fetchProtectedBlob(`/api/employees/${employeeId}/salary-slips/${slipId}/file`);
+export const fetchMySalarySlipBlob = (slipId: string) => fetchProtectedBlob(`/api/me/salary-slips/${slipId}/file`);

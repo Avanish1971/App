@@ -1,6 +1,7 @@
 // Real-time push (Server-Sent Events). Koi extra package nahi chahiye.
 // Admin panel aur employee app ek hi connection khule rakhte hain, server naya kuch hote hi turant bhej deta hai.
-const clients = new Set(); // { res, role, employeeId }
+const { currentTenantId } = require('./tenant');
+const clients = new Set(); // { res, role, employeeId, companyId }
 
 function addClient(client) {
   clients.add(client);
@@ -17,17 +18,23 @@ function write(client, event, data) {
 
 // Saare admin screens ko
 function broadcastAdmin(event, data) {
-  clients.forEach((c) => c.role === 'admin' && write(c, event, data));
+  const cid = currentTenantId();
+  if (!cid) return;
+  clients.forEach((c) => c.role === 'admin' && c.companyId === cid && write(c, event, data));
 }
 
 // Ek employee ke phone ko (uski saari open screens)
 function sendToEmployee(employeeId, event, data) {
-  clients.forEach((c) => c.role === 'employee' && c.employeeId === employeeId && write(c, event, data));
+  const cid = currentTenantId();
+  if (!cid) return;
+  clients.forEach((c) => c.role === 'employee' && c.companyId === cid && c.employeeId === employeeId && write(c, event, data));
 }
 
 // Sabhi employees ko
 function broadcastEmployees(event, data) {
-  clients.forEach((c) => c.role === 'employee' && write(c, event, data));
+  const cid = currentTenantId();
+  if (!cid) return;
+  clients.forEach((c) => c.role === 'employee' && c.companyId === cid && write(c, event, data));
 }
 
 // Proxy/load balancer connection na kaate isliye har 25 sec me heartbeat

@@ -10,7 +10,8 @@ import {
   LeaveBalance,
 } from '../../types';
 import { validateGeofence, formatDistance } from '../../utils/geo';
-import { PayslipViewer } from './PayslipViewer';
+import { ProfileModule } from './ProfileModule';
+import { useCompany } from '../../lib/useCompany';
 import { openLocationSettings } from './useGeofenceTracking';
 import { LeaveModule } from './LeaveModule';
 import { RegularizationModal } from './RegularizationModal';
@@ -29,6 +30,7 @@ import {
   ChevronRight,
   Building,
   Briefcase,
+  User as UserIcon,
   Lock,
 } from 'lucide-react';
 
@@ -72,7 +74,8 @@ export function MobileAppSimulator({
   const isMock = false;
 
   // Modals
-  const [showPayslip, setShowPayslip] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const { name: companyName, logoUrl } = useCompany();
   const [showLeave, setShowLeave] = useState(false);
   const [showRegularization, setShowRegularization] = useState(false);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -201,6 +204,14 @@ export function MobileAppSimulator({
 
       {/* Main Full Screen Viewport Area */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3.5 pb-24 text-xs">
+        {/* Company naam + logo (admin ne jo set kiya) */}
+        {(companyName || logoUrl) && (
+          <div className="flex items-center gap-2">
+            {logoUrl && <img src={logoUrl} alt={companyName} className="h-7 max-w-[88px] object-contain" />}
+            {companyName && <span className="text-[11px] font-bold text-slate-700 truncate">{companyName}</span>}
+          </div>
+        )}
+
         {/* Profile Card */}
         <div className="flex items-center justify-between">
           <div>
@@ -285,7 +296,7 @@ export function MobileAppSimulator({
           {employee.workType === 'FIELD_WORK' ? (
             attendance.status === 'SCHEDULED' || attendance.status === 'OUTSIDE_GEOFENCE' ? (
               <div className="w-full py-2.5 px-3 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-medium rounded-xl text-center">
-                Field Work: client ke paas pahunchkar neeche <strong>Client Site Check-In</strong> se hazri lagao
+                Office me aate hi hazri <strong>apne aap</strong> lagegi. Client ke paas ho to neeche <strong>Client Site Check-In</strong> karo
               </div>
             ) : (
               <button
@@ -387,14 +398,14 @@ export function MobileAppSimulator({
           <Calendar className="w-4 h-4" />
           Leaves
         </button>
-        <button onClick={() => setShowPayslip(true)} className="flex flex-col items-center gap-0.5 hover:text-slate-700">
-          <Briefcase className="w-4 h-4" />
-          Salary
+        <button onClick={() => setShowProfile(true)} className="flex flex-col items-center gap-0.5 hover:text-slate-700">
+          <UserIcon className="w-4 h-4" />
+          Profile
         </button>
       </div>
 
       {/* Modals Containers */}
-      {showPayslip && <PayslipViewer payrollItem={payrollItem} onClose={() => setShowPayslip(false)} />}
+      {showProfile && <ProfileModule employee={employee} office={office} onClose={() => setShowProfile(false)} />}
       {showLeave && <LeaveModule
           leaves={leaves}
           leaveBalance={leaveBalance || null}

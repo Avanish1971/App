@@ -13,4 +13,6 @@ const OfficeSchema = new mongoose.Schema({
   activeEmployeeCount: Number,
 }, { timestamps: true, versionKey: false });
 
+OfficeSchema.plugin(require('../utils/tenant').tenantPlugin);
+
 module.exports = mongoose.model('Office', OfficeSchema);

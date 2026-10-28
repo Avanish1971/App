@@ -15,7 +15,7 @@ const { runWithTenant } = require('./tenant');
 const Company = require('../models/Company');
 
 // In status wale employees ka attendance GPS se nahi badalta
-const PROTECTED_STATUSES = ['ON_LEAVE', 'WFH', 'ON_DUTY', 'ON_BREAK'];
+const PROTECTED_STATUSES = ['ON_LEAVE', 'WFH', 'ON_DUTY', 'ON_BREAK', 'HALF_DAY', 'CHECKED_OUT'];
 
 function httpError(status, message) {
   const e = new Error(message);
@@ -43,15 +43,33 @@ function newEvent(eventType, lat, lng, accuracy, note) {
   };
 }
 
-function markAbsent(record, lat, lng, accuracy, minutesOutside) {
-  record.status = 'ABSENT';
+// Employee office ke radius se grace time se zyada bahar raha: din band karo.
+//  - Shift ke BEECH me gaya  -> HALF DAY
+//  - Shift khatam hone ke time (ya baad) gaya -> CHECKED_OUT (din poora)
+async function finishDay(record, employee, lat, lng, accuracy, minutesOutside) {
+  const shift = await Shift.findOne({ id: record.shiftId || (employee && employee.shiftId) });
+  const end = shift && !shift.isOvernight ? parseClock(shift.endTime) : null;
+  const early = (shift && shift.earlyCheckoutMinutes) || 0;
+  const nowMin = minutesNowIST();
+  const midShift = end !== null && nowMin < end - early;
+
+  const inMin = record.checkInTime ? parseClock(record.checkInTime) : null;
+  if (inMin !== null) record.workingMinutes = Math.max(0, nowMin - inMin - (record.breakMinutes || 0));
+
   record.checkOutTime = nowTimeIST();
   record.checkOutLat = lat;
   record.checkOutLng = lng;
   record.outsideSince = undefined;
-  record.events.push(
-    newEvent('CHECK_OUT', lat, lng, accuracy, `Auto: office radius ke bahar ${minutesOutside} min -> ABSENT`)
-  );
+  if (midShift) {
+    record.status = 'HALF_DAY';
+    record.isEarlyExit = true;
+    record.events.push(
+      newEvent('CHECK_OUT', lat, lng, accuracy, `Shift ke beech me office radius ke bahar ${minutesOutside} min -> HALF DAY`)
+    );
+  } else {
+    record.status = 'CHECKED_OUT';
+    record.events.push(newEvent('CHECK_OUT', lat, lng, accuracy, 'Shift khatam, office se nikle -> CHECK-OUT (din poora)'));
+  }
 }
 
 // App se aayi ek location ko process karta hai
@@ -113,19 +131,29 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
-  // Field staff: office ke radius me aaye to PRESENT lagao (late/absent GPS se nahi lagta).
-  // Office se bahar jaana = client ke paas jaana ho sakta hai, isliye bahar jaane par kabhi ABSENT nahi.
+  // Field staff: hamesha field par nahi hote. Office ke radius me aate hi PRESENT (office me kaam),
+  // bahar nikalte hi ON_DUTY (field par). Office se bahar jaane par kabhi ABSENT/HALF DAY nahi lagta.
   if (employee.workType === 'FIELD_WORK') {
-    if (inside && record.status === 'SCHEDULED') {
-      record.status = 'PRESENT';
-      record.verificationStatus = 'VERIFIED';
-      record.checkInTime = nowTimeIST();
-      record.checkInLat = lat;
-      record.checkInLng = lng;
-      record.checkInAccuracy = accuracy;
-      record.source = 'AUTO_GEOFENCE';
-      record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye (${dist}m door)`));
-      record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, 'Auto check-in (office): PRESENT'));
+    const wasAt = record.locationType;
+    record.locationType = inside ? 'OFFICE' : 'FIELD';
+    if (inside) {
+      if (record.status === 'SCHEDULED' || record.status === 'ON_DUTY') {
+        const firstTime = !record.checkInTime;
+        record.status = 'PRESENT';
+        record.verificationStatus = 'VERIFIED';
+        if (firstTime) {
+          record.checkInTime = nowTimeIST();
+          record.checkInLat = lat;
+          record.checkInLng = lng;
+          record.checkInAccuracy = accuracy;
+          record.source = 'AUTO_GEOFENCE';
+        }
+        record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye: office me kaam (${dist}m door)`));
+        if (firstTime) record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, 'Auto check-in (office): PRESENT'));
+      }
+    } else if (record.status === 'PRESENT' && wasAt !== 'FIELD') {
+      record.status = 'ON_DUTY';
+      record.events.push(newEvent('GEOFENCE_EXIT', lat, lng, accuracy, `Field staff ${office.name} se bahar gaye: field par (ON-DUTY)`));
     }
     record.outsideSince = undefined;
     await record.save();
@@ -166,12 +194,12 @@ async function processPingInner(employeeId, ping) {
       record.outsideSince = new Date();
       record.events.push(
         newEvent('GEOFENCE_EXIT', lat, lng, accuracy,
-          `${office.name} ke radius se bahar (${dist}m door). ${policy.exitGracePeriodMinutes} min me wapas nahi aaye to ABSENT`)
+          `${office.name} ke radius se bahar (${dist}m door). ${policy.exitGracePeriodMinutes} min me wapas nahi aaye to shift ke beech me HALF DAY lagega`)
       );
     }
     const minutesOutside = (Date.now() - new Date(record.outsideSince).getTime()) / 60000;
     if (minutesOutside >= policy.exitGracePeriodMinutes) {
-      markAbsent(record, lat, lng, accuracy, Math.round(minutesOutside));
+      await finishDay(record, employee, lat, lng, accuracy, Math.round(minutesOutside));
     }
   }
 
@@ -199,7 +227,7 @@ async function processPing(employeeId, ping) {
 }
 
 // Har minute chalta hai: jo employee radius se bahar nikle aur app band ho gaya
-// (isliye naya location nahi aa raha), unhe grace time ke baad ABSENT kar deta hai.
+// (isliye naya location nahi aa raha), unka din grace time ke baad band kar deta hai (HALF DAY / CHECK-OUT).
 async function sweepExpiredExits() {
   const policy = await getPolicy();
   const cutoff = new Date(Date.now() - policy.exitGracePeriodMinutes * 60000);
@@ -209,10 +237,11 @@ async function sweepExpiredExits() {
     outsideSince: { $lte: cutoff },
   });
   for (const record of stale) {
+    const employee = await Employee.findOne({ id: record.employeeId });
     const minutes = Math.round((Date.now() - new Date(record.outsideSince).getTime()) / 60000);
-    markAbsent(record, record.lastLat, record.lastLng, 0, minutes);
+    await finishDay(record, employee, record.lastLat, record.lastLng, 0, minutes);
     await record.save();
-    broadcastAdmin('attendance', { record: record.toObject(), reason: 'AUTO_ABSENT' });
+    broadcastAdmin('attendance', { record: record.toObject(), reason: 'AUTO_EXIT' });
   }
   return stale.length;
 }

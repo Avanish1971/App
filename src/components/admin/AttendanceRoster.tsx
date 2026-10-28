@@ -46,7 +46,7 @@ export function AttendanceRoster({
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const departments = ['ALL', 'Engineering', 'HR', 'Finance', 'Sales', 'Operations'];
-  const statuses = ['ALL', 'PRESENT', 'ON_BREAK', 'WFH', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
+  const statuses = ['ALL', 'PRESENT', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK', 'WFH', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
 
   const filtered = employees.filter((emp) => {
     const matchesSearch =
@@ -247,9 +247,9 @@ export function AttendanceRoster({
                         <div className="flex items-center gap-1.5">
                           <span
                             className={`w-2 h-2 rounded-full ${
-                              status === 'PRESENT' || status === 'ON_DUTY'
+                              status === 'PRESENT' || status === 'ON_DUTY' || status === 'CHECKED_OUT'
                                 ? 'bg-emerald-400'
-                                : status === 'ON_BREAK'
+                                : status === 'ON_BREAK' || status === 'HALF_DAY'
                                 ? 'bg-amber-400'
                                 : status === 'WFH'
                                 ? 'bg-cyan-400'
@@ -259,11 +259,21 @@ export function AttendanceRoster({
                             }`}
                           />
                           <span className="font-semibold text-slate-900">
-                            {status === 'ON_DUTY' ? 'PRESENT (On-Duty)' : status}
+                            {status === 'ON_DUTY' ? 'PRESENT (On-Duty)' : status === 'HALF_DAY' ? 'HALF DAY' : status === 'CHECKED_OUT' ? 'CHECKED OUT (din poora)' : status}
                           </span>
                           {isLate && (
                             <span className="text-[9px] font-mono font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
                               LATE
+                            </span>
+                          )}
+                          {emp.workType === 'FIELD_WORK' && record?.locationType === 'OFFICE' && (
+                            <span className="text-[9px] font-mono font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200" title="Field staff abhi office me kaam kar raha hai">
+                              OFFICE ME
+                            </span>
+                          )}
+                          {emp.workType === 'FIELD_WORK' && record?.locationType === 'FIELD' && (
+                            <span className="text-[9px] font-mono font-bold text-cyan-700 bg-cyan-50 px-1 py-0.2 rounded border border-cyan-200" title="Field staff abhi office se bahar (field par) hai">
+                              FIELD PAR
                             </span>
                           )}
                           {record?.signalLost && (

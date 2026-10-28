@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
 import { PendingDocument } from '../../lib/files';
 import { FilePicker } from './FilePicker';
+import { AvatarPicker, PickedPhoto } from './AvatarPicker';
 import { useCompany } from '../../lib/useCompany';
 import {
   UserPlus,
@@ -27,7 +28,7 @@ interface AddEmployeeModalProps {
   shifts: Shift[];
   employees: Employee[];
   // Employee banao, phir uske documents upload karo. failed = jo documents upload nahi ho paaye.
-  onAddEmployee: (newEmployee: Employee, docs: PendingDocument[]) => Promise<{ failed: string[] }>;
+  onAddEmployee: (newEmployee: Employee, docs: PendingDocument[], photo: PickedPhoto | null) => Promise<{ failed: string[] }>;
   onClose: () => void;
 }
 
@@ -69,6 +70,7 @@ function Section({ icon: Icon, title, children }: { icon: typeof Key; title: str
 export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, onClose }: AddEmployeeModalProps) {
   const { code: companyCode, empPrefix } = useCompany();
   // ---- Basic ----
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+91 ');
@@ -223,7 +225,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
 
     setSaving(true);
     try {
-      const { failed } = await onAddEmployee(newEmp, docs);
+      const { failed } = await onAddEmployee(newEmp, docs, photo);
       if (failed.length === 0) onClose();
       else setFailedDocs(failed);
     } catch (err) {
@@ -279,6 +281,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
           {/* 1. Basic */}
           <Section icon={UserPlus} title="1. Basic Details (बुनियादी जानकारी)">
+            <AvatarPicker picked={photo} onPick={setPhoto} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>पूरा नाम (Full Name) *</label>

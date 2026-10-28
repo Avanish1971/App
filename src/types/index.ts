@@ -9,6 +9,7 @@ export type AttendanceStatus =
   | 'OUTSIDE_GEOFENCE'
   | 'CHECKOUT_PENDING'
   | 'ABSENT'
+  | 'HALF_DAY'
   | 'ON_LEAVE'
   | 'WFH'
   | 'ON_DUTY'
@@ -171,6 +172,7 @@ export interface AttendanceRecord {
   lastDistanceMeters?: number;
   insideGeofence?: boolean;
   signalLost?: boolean; // true = location nahi aa rahi (app/location band)
+  locationType?: 'OFFICE' | 'FIELD'; // field staff abhi office me hai ya field par
   clientVisit?: ClientVisitSummary;
   clientVisits?: ClientVisitSummary[];
   events: AttendanceEvent[];

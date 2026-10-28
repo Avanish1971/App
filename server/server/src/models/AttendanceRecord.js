@@ -31,7 +31,7 @@ const AttendanceRecordSchema = new mongoose.Schema({
   shiftId: String,
   status: {
     type: String,
-    enum: ['SCHEDULED', 'PRESENT', 'ON_BREAK', 'ON_DUTY', 'WFH', 'ON_LEAVE', 'ABSENT', 'OUTSIDE_GEOFENCE'],
+    enum: ['SCHEDULED', 'PRESENT', 'ON_BREAK', 'ON_DUTY', 'WFH', 'ON_LEAVE', 'ABSENT', 'OUTSIDE_GEOFENCE', 'HALF_DAY', 'CHECKED_OUT'],
     default: 'SCHEDULED',
   },
   checkInTime: String,
@@ -51,6 +51,7 @@ const AttendanceRecordSchema = new mongoose.Schema({
   // Geofence tracking (server khud bharta hai)
   outsideSince: Date,
   lastPingAt: Date,
+  locationType: String, // field staff: 'OFFICE' (office me) / 'FIELD' (bahar)
   signalLost: Boolean, // true = kuch minute se location nahi aa rahi (app band / location band)
   lastLat: Number,
   lastLng: Number,

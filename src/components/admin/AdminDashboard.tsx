@@ -26,6 +26,7 @@ import { EmployeeDirectory } from './EmployeeDirectory';
 import { MessageCenter } from './MessageCenter';
 import { FieldVisitsPanel } from './FieldVisitsPanel';
 import type { PendingDocument } from '../../lib/files';
+import type { PickedPhoto } from './AvatarPicker';
 import {
   Users,
   CheckCircle2,
@@ -69,7 +70,8 @@ interface AdminDashboardProps {
   onActionExpense: (id: string, action: 'APPROVED' | 'REJECTED') => void;
   onLockPayroll: () => void;
   onSavePolicy: (newPolicy: AttendancePolicy) => void;
-  onAddEmployee: (newEmployee: Employee, docs: PendingDocument[]) => Promise<{ failed: string[] }>;
+  onAddEmployee: (newEmployee: Employee, docs: PendingDocument[], photo: PickedPhoto | null) => Promise<{ failed: string[] }>;
+  onEmployeeUpdated: (employee: Employee) => void;
   onTransferEmployee: (
     employeeId: string,
     payload: { officeId: string; shiftId?: string; reportingManager?: string; reason?: string }
@@ -101,6 +103,7 @@ export function AdminDashboard({
   onSavePolicy,
   onAddEmployee,
   onTransferEmployee,
+  onEmployeeUpdated,
   onToggleEmployeeStatus,
   onDeleteEmployee,
   onLogout,
@@ -314,6 +317,7 @@ export function AdminDashboard({
             onDeleteEmployee={onDeleteEmployee}
             onViewAudit={(emp, rec) => setInspectAuditEmployee({ employee: emp, record: rec })}
             onTransferEmployee={onTransferEmployee}
+            onEmployeeUpdated={onEmployeeUpdated}
           />
         )}
 

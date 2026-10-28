@@ -48,15 +48,29 @@ async function request<T>(path: string, options?: RequestInit, withAuth = true):
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
     }
     const body = await res.json().catch(() => ({}));
+    if (!body.error && res.status === 404) {
+      // JSON jawab nahi aaya = server ko ye route pata hi nahi: server ka naya code deploy nahi hua
+      throw new Error('Server me ye feature abhi nahi hai (404). Backend ka naya code deploy karke server restart karo.');
+    }
     throw new Error(body.error || `Request failed: ${res.status} ${BASE_URL}${path}`);
   }
   return res.json();
 }
 
+// Server photo ka path deta hai (/api/photos/<token>); use poora link bana do taaki <img> me dikhe
+export const resolveAvatar = (avatar?: string) =>
+  avatar && avatar.startsWith('/') ? `${BASE_URL}${avatar}` : avatar || '';
+const withAvatar = <T extends { avatar?: string }>(e: T): T => ({ ...e, avatar: resolveAvatar(e.avatar) });
+
 // ---- Employees ----
-export const getEmployees = () => request<Employee[]>('/api/employees');
+export const getEmployees = () => request<Employee[]>('/api/employees').then((l) => l.map(withAvatar));
 export const addEmployeeApi = (employee: Employee) =>
-  request<Employee>('/api/employees', { method: 'POST', body: JSON.stringify(employee) });
+  request<Employee>('/api/employees', { method: 'POST', body: JSON.stringify(employee) }).then(withAvatar);
+// Admin: employee ki profile photo (employee ke app me bhi wahi dikhegi)
+export const uploadEmployeePhotoApi = (employeeId: string, photo: { photoBase64: string; photoMime: string }) =>
+  request<Employee>(`/api/employees/${employeeId}/photo`, { method: 'PUT', body: JSON.stringify(photo) }).then(withAvatar);
+export const deleteEmployeePhotoApi = (employeeId: string) =>
+  request<Employee>(`/api/employees/${employeeId}/photo`, { method: 'DELETE' }).then(withAvatar);
 export const updateEmployeeStatusApi = (
   employeeId: string,
   status: 'ACTIVE' | 'INACTIVE',
@@ -202,7 +216,8 @@ export interface MeData {
   leaves: LeaveRequest[];
   leaveBalance?: LeaveBalance;
 }
-export const getMeApi = () => request<MeData>('/api/me');
+export const getMeApi = () =>
+  request<MeData>('/api/me').then((d) => ({ ...d, employee: withAvatar(d.employee) }));
 
 // ---- Messages ----
 export const getMessagesApi = () => request<AdminMessage[]>('/api/messages');

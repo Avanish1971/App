@@ -76,6 +76,24 @@ export function MobileAppSimulator({
   // Modals
   const [showProfile, setShowProfile] = useState(false);
   const { name: companyName, logoUrl } = useCompany();
+
+  // Kaam ka asli time (check-in se ab tak, break hata kar). Har 30 sec me naya.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const fmtMinutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}h ${String(m % 60).padStart(2, '0')}m`;
+  const workedLabel = () => {
+    if ((attendance.status === 'HALF_DAY' || attendance.status === 'CHECKED_OUT') && attendance.workingMinutes) {
+      return fmtMinutes(attendance.workingMinutes);
+    }
+    const m = String(attendance.checkInTime || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!m) return '--';
+    const inMin = (Number(m[1]) % 12 + (m[3].toUpperCase() === 'PM' ? 12 : 0)) * 60 + Number(m[2]);
+    const [hh, mm] = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }).split(':').map(Number);
+    return fmtMinutes(Math.max(0, hh * 60 + mm - inMin - (attendance.breakMinutes || 0)));
+  };
   const [showLeave, setShowLeave] = useState(false);
   const [showRegularization, setShowRegularization] = useState(false);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -261,12 +279,20 @@ export function MobileAppSimulator({
             <span className="text-[11px] font-semibold text-slate-500">Today's Status</span>
             <span
               className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] tracking-wide ${
-                attendance.status === 'PRESENT' || attendance.status === 'ON_DUTY'
+                attendance.status === 'PRESENT' || attendance.status === 'ON_DUTY' || attendance.status === 'CHECKED_OUT'
                   ? 'bg-emerald-500 text-white'
+                  : attendance.status === 'HALF_DAY'
+                  ? 'bg-orange-500 text-white'
                   : 'bg-amber-500 text-white'
               }`}
             >
-              {attendance.status === 'ON_DUTY' ? 'PRESENT (On-Duty)' : attendance.status}
+              {attendance.status === 'ON_DUTY'
+                ? 'PRESENT (On-Duty)'
+                : attendance.status === 'HALF_DAY'
+                ? 'HALF DAY'
+                : attendance.status === 'CHECKED_OUT'
+                ? 'CHECKED OUT'
+                : attendance.status}
             </span>
           </div>
 
@@ -287,13 +313,33 @@ export function MobileAppSimulator({
                 <div className="text-[11px] font-bold text-slate-900">
                   {attendance.status === 'ON_BREAK'
                     ? `${Math.floor(breakTimerSeconds / 60)}m ${breakTimerSeconds % 60}s`
-                    : '07h 32m'}
+                    : workedLabel()}
                 </div>
               </div>
             </div>
           </div>
 
-          {employee.workType === 'FIELD_WORK' ? (
+          {employee.workType === 'FIELD_WORK' && attendance.locationType && attendance.status !== 'SCHEDULED' && (
+            <div
+              className={`w-full py-2 px-3 rounded-xl text-[11px] font-semibold text-center border ${
+                attendance.locationType === 'OFFICE' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-cyan-50 border-cyan-200 text-cyan-700'
+              }`}
+            >
+              {attendance.locationType === 'OFFICE' ? 'Abhi aap office me kaam kar rahe ho (PRESENT)' : 'Abhi aap field par ho (ON-DUTY)'}
+            </div>
+          )}
+
+          {attendance.status === 'HALF_DAY' || attendance.status === 'CHECKED_OUT' ? (
+            <div
+              className={`w-full py-2.5 px-3 border text-[11px] font-medium rounded-xl text-center ${
+                attendance.status === 'HALF_DAY' ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              }`}
+            >
+              {attendance.status === 'HALF_DAY'
+                ? 'Aap shift ke beech me office se bahar chale gaye, isliye aaj ka attendance HALF DAY hai. Galti ho to Regularize karo.'
+                : `Aaj ka kaam poora. Check-out: ${attendance.checkOutTime || '--'}`}
+            </div>
+          ) : employee.workType === 'FIELD_WORK' ? (
             attendance.status === 'SCHEDULED' || attendance.status === 'OUTSIDE_GEOFENCE' ? (
               <div className="w-full py-2.5 px-3 bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-medium rounded-xl text-center">
                 Office me aate hi hazri <strong>apne aap</strong> lagegi. Client ke paas ho to neeche <strong>Client Site Check-In</strong> karo

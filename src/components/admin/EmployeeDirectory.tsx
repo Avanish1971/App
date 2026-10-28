@@ -7,6 +7,8 @@ import { EmployeeDocuments } from './EmployeeDocuments';
 import { LeaveBalanceCard } from './LeaveBalanceCard';
 import { FieldVisitList } from './FieldVisitList';
 import { SalarySlipsCard } from './SalarySlipsCard';
+import { AvatarPicker } from './AvatarPicker';
+import { uploadEmployeePhotoApi } from '../../lib/api';
 import { getEmployeeAttendanceApi } from '../../lib/api';
 import { formatINR } from '../../utils/payroll';
 import { didCome, currentMonthIST } from './MonthlyAttendanceReport';
@@ -50,6 +52,7 @@ interface EmployeeDirectoryProps {
     employeeId: string,
     payload: { officeId: string; shiftId?: string; reportingManager?: string; reason?: string }
   ) => Promise<void>;
+  onEmployeeUpdated: (employee: Employee) => void;
 }
 
 const daysAgo = (n: number) => {
@@ -113,7 +116,10 @@ export function EmployeeDirectory({
   onDeleteEmployee,
   onViewAudit,
   onTransferEmployee,
+  onEmployeeUpdated,
 }: EmployeeDirectoryProps) {
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployeeId || null);
   const [showList, setShowList] = useState(false);
@@ -178,6 +184,7 @@ export function EmployeeDirectory({
     const list = (history || []).filter((r) => r.date.startsWith(month));
     return {
       came: list.filter(didCome).length,
+      half: list.filter((r) => r.status === 'HALF_DAY').length,
       absent: list.filter((r) => r.status === 'ABSENT').length,
       leave: list.filter((r) => r.status === 'ON_LEAVE').length,
       late: list.filter((r) => r.isLate).length,
@@ -264,12 +271,27 @@ export function EmployeeDirectory({
         <div className="space-y-4">
           {/* Profile header */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-wrap items-center gap-4">
-            <img
-              src={employee.avatar}
-              alt={employee.fullName}
-              referrerPolicy="no-referrer"
-              className="w-16 h-16 rounded-2xl border border-slate-300 object-cover"
-            />
+            <div className="space-y-1">
+              <AvatarPicker
+                currentUrl={employee.avatar}
+                picked={null}
+                size={72}
+                busy={photoBusy}
+                onPick={async (p) => {
+                  if (!p) return;
+                  setPhotoBusy(true);
+                  setPhotoError(null);
+                  try {
+                    onEmployeeUpdated(await uploadEmployeePhotoApi(employee.id, { photoBase64: p.base64, photoMime: p.mime }));
+                  } catch (e) {
+                    setPhotoError(e instanceof Error ? e.message : 'Photo upload nahi hui');
+                  } finally {
+                    setPhotoBusy(false);
+                  }
+                }}
+              />
+              {photoError && <div className="text-[10px] text-rose-600 max-w-[220px]">{photoError}</div>}
+            </div>
             <div className="flex-1 min-w-[200px]">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-lg font-extrabold text-slate-900">{employee.fullName}</h4>
@@ -510,10 +532,11 @@ export function EmployeeDirectory({
                 {history === null ? (
                   <div className="text-xs text-slate-500">Loading…</div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-5 gap-2 text-center">
                     {[
                       { label: 'Aaya', value: monthStats.came, color: 'text-emerald-600' },
-                      { label: 'Absent', value: monthStats.absent, color: 'text-rose-600' },
+                      { label: 'Half Day', value: monthStats.half, color: 'text-amber-700' },
+      { label: 'Absent', value: monthStats.absent, color: 'text-rose-600' },
                       { label: 'Leave', value: monthStats.leave, color: 'text-purple-600' },
                       { label: 'Late', value: monthStats.late, color: 'text-amber-600' },
                     ].map((s) => (

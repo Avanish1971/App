@@ -4,6 +4,7 @@ import {
   getEmployees,
   addEmployeeApi,
   uploadEmployeeDocumentApi,
+  uploadEmployeePhotoApi,
   transferEmployeeApi,
   updateEmployeeStatusApi,
   deleteEmployeeApi,
@@ -30,6 +31,7 @@ import { useLiveEvents } from './lib/realtime';
 import { useCompany } from './lib/useCompany';
 import { CompanyProfileModal } from './components/admin/CompanyProfileModal';
 import { PendingDocument, DOC_TYPE_LABELS, readFileAsBase64 } from './lib/files';
+import type { PickedPhoto } from './components/admin/AvatarPicker';
 import { LiveToasts, LiveToast } from './components/admin/LiveToasts';
 import {
   Office,
@@ -228,10 +230,18 @@ export default function AdminApp() {
   };
 
   // Employee banao, phir uske documents ek-ek karke upload karo. Error aaye to modal ko dikhane ke liye throw.
-  const handleAddEmployee = async (newEmployee: Employee, docs: PendingDocument[]) => {
+  const handleAddEmployee = async (newEmployee: Employee, docs: PendingDocument[], photo: PickedPhoto | null) => {
     const created = await addEmployeeApi(newEmployee);
     setEmployees((prev) => [created, ...prev]);
     const failed: string[] = [];
+    if (photo) {
+      try {
+        const withPhoto = await uploadEmployeePhotoApi(created.id, { photoBase64: photo.base64, photoMime: photo.mime });
+        setEmployees((prev) => prev.map((e) => (e.id === created.id ? { ...e, ...withPhoto } : e)));
+      } catch {
+        failed.push('Profile Photo');
+      }
+    }
     for (const d of docs) {
       try {
         await uploadEmployeeDocumentApi(created.id, {
@@ -246,6 +256,11 @@ export default function AdminApp() {
       }
     }
     return { failed };
+  };
+
+  // Admin ne employee ki photo badli: list me bhi naya photo dikhe
+  const handleEmployeeUpdated = (updated: Employee) => {
+    setEmployees((prev) => prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e)));
   };
 
   // Employee ko doosre branch me bhejo
@@ -376,6 +391,8 @@ export default function AdminApp() {
           ? { kind: 'late', title: `${name} office me aaya: LATE`, detail: `Check-in ${rec.checkInTime || ''}` }
           : { kind: 'present', title: `${name} office me aaya: PRESENT`, detail: `Check-in ${rec.checkInTime || ''}` }
       );
+    } else if (rec.status === 'HALF_DAY' && prev?.status !== 'HALF_DAY') {
+      pushToast({ kind: 'late', title: `${name} shift ke beech me office se chala gaya: HALF DAY`, detail: 'Radius ke bahar grace time se zyada raha' });
     } else if (rec.status === 'ABSENT' && prev?.status !== 'ABSENT') {
       pushToast({ kind: 'absent', title: `${name} office se bahar gaya: ABSENT`, detail: 'Radius ke bahar grace time se zyada raha' });
     }
@@ -504,6 +521,7 @@ export default function AdminApp() {
           onSavePolicy={handleSavePolicy}
           onAddEmployee={handleAddEmployee}
           onTransferEmployee={handleTransferEmployee}
+          onEmployeeUpdated={handleEmployeeUpdated}
           onToggleEmployeeStatus={handleToggleEmployeeStatus}
           onDeleteEmployee={handleDeleteEmployee}
           onLogout={handleLogout}

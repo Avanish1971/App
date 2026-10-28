@@ -189,7 +189,7 @@ export function OfficeLocations({ offices, employees, onAddOffice, onUpdateOffic
           <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <div>Employee ke phone me app khuli ho aur wo office ke radius me aaye, to attendance apne aap <b className="text-emerald-700">PRESENT</b> ho jati hai.</div>
-            <div>Radius ke bahar grace time se zyada rahe to <b className="text-rose-600">ABSENT</b> ho jati hai (grace time "Policy &amp; Shift Engine" me set hota hai).</div>
+            <div>Shift ke beech me radius ke bahar grace time se zyada rahe to <b className="text-amber-700">HALF DAY</b> lag jata hai (grace time "Policy &amp; Shift Engine" me set hota hai).</div>
           </div>
         </div>
       </div>

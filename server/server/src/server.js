@@ -20,17 +20,17 @@ const employeeDocumentsRouter = require('./routes/employeeDocuments');
 const clientVisitsRouter = require('./routes/clientVisits');
 const salarySlipsRouter = require('./routes/salarySlips');
 const companyRouter = require('./routes/company');
+const employeePhotoRouter = require('./routes/employeePhoto');
+const photosRouter = require('./routes/photos');
 const eventsRouter = require('./routes/events');
 const { requireRole, attendanceGuard, requestsGuard, tenantScope } = require('./middleware/auth');
 const { migrate } = require('./utils/migrate');
 
-// const app = express();
+const app = express();
 
-// app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
 // Document upload ke liye bada body chahiye (sirf us route par); baaki sab jagah chhota limit
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips)|me\/client-visits|company)/;
+const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips|photo)|me\/client-visits|company)/;
 const smallJson = express.json();
 app.use((req, res, next) => (DOC_ROUTE.test(req.path) ? next() : smallJson(req, res, next)));
 
@@ -40,6 +40,7 @@ app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API r
 // Har route me `tenantScope` ke baad ka kaam sirf usi company ke data par chalta hai.
 const admin = requireRole('admin');
 app.use('/api/auth', authRouter);
+app.use('/api/photos', photosRouter); // profile photo (random token wala link)
 app.use('/api/company', companyRouter); // public/logo bina login, baaki route khud guard karte hain
 app.use('/api/events', eventsRouter); // live stream (token URL me, route khud verify karta hai)
 app.use('/api/me/client-visits', requireRole('employee'), express.json({ limit: '6mb' })); // photos wala bada body
@@ -47,6 +48,7 @@ app.use('/api/me', requireRole('employee'), tenantScope, meRouter);
 app.use('/api/messages', admin, tenantScope, messagesRouter);
 app.use('/api/client-visits', admin, tenantScope, clientVisitsRouter);
 app.use('/api/employees/:id/documents', admin, express.json({ limit: '6mb' }), tenantScope, employeeDocumentsRouter);
+app.use('/api/employees/:id/photo', admin, express.json({ limit: '3mb' }), tenantScope, employeePhotoRouter);
 app.use('/api/employees/:id/salary-slips', admin, express.json({ limit: '6mb' }), tenantScope, salarySlipsRouter);
 app.use('/api/employees', admin, tenantScope, employeesRouter);
 app.use('/api/offices', admin, tenantScope, officesRouter);

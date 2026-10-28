@@ -10,7 +10,7 @@ interface MonthlyAttendanceReportProps {
 }
 
 // Ye statuses "us din aaya" maane jaate hain
-const CAME_STATUSES = ['PRESENT', 'ON_BREAK', 'ON_DUTY', 'WFH', 'CHECKED_OUT', 'REGULARIZED'];
+const CAME_STATUSES = ['PRESENT', 'ON_BREAK', 'ON_DUTY', 'WFH', 'CHECKED_OUT', 'HALF_DAY', 'REGULARIZED'];
 
 export function didCome(r: AttendanceRecord) {
   return Boolean(r.checkInTime) || CAME_STATUSES.includes(r.status);
@@ -65,6 +65,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         return {
           emp,
           came: came.length,
+          half: list.filter((r) => r.status === 'HALF_DAY').length,
           absent: list.filter((r) => r.status === 'ABSENT').length,
           leave: list.filter((r) => r.status === 'ON_LEAVE').length,
           wfh: list.filter((r) => r.status === 'WFH').length,
@@ -138,6 +139,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
               <th className="py-3 px-4">Employee</th>
               <th className="py-3 px-4">Department & Base</th>
               <th className="py-3 px-4 text-center">Days Came (आया)</th>
+              <th className="py-3 px-4 text-center">Half Day</th>
               <th className="py-3 px-4 text-center">Absent</th>
               <th className="py-3 px-4 text-center">On Leave</th>
               <th className="py-3 px-4 text-center">WFH</th>
@@ -149,18 +151,18 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
           <tbody className="divide-y divide-slate-200 text-slate-700">
             {loading ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-slate-500">
+                <td colSpan={10} className="py-8 text-center text-slate-500">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-slate-500">
+                <td colSpan={10} className="py-8 text-center text-slate-500">
                   Koi employee nahi mila.
                 </td>
               </tr>
             ) : (
-              rows.map(({ emp, came, absent, leave, wfh, late, minutes }) => {
+              rows.map(({ emp, came, half, absent, leave, wfh, late, minutes }) => {
                 const office = offices.find((o) => o.id === emp.officeId);
                 return (
                   <tr
@@ -193,6 +195,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
                         {came}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-center font-mono text-amber-700 font-semibold">{half}</td>
                     <td className="py-3 px-4 text-center font-mono text-rose-600 font-semibold">{absent}</td>
                     <td className="py-3 px-4 text-center font-mono text-purple-600 font-semibold">{leave}</td>
                     <td className="py-3 px-4 text-center font-mono text-cyan-600 font-semibold">{wfh}</td>

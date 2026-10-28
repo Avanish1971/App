@@ -18,6 +18,7 @@ const TENANT_MODELS = [
   require('../models/ClientVisit'),
   require('../models/EmployeeDocument'),
   require('../models/SalarySlip'),
+  require('../models/EmployeePhoto'),
 ];
 
 const DEFAULT_ID = 'cmp_default';

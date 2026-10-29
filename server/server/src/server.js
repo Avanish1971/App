@@ -30,7 +30,7 @@ const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
 // Document upload ke liye bada body chahiye (sirf us route par); baaki sab jagah chhota limit
-const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips|photo)|me\/client-visits|company)/;
+const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips|photo)|me\/client-visits|company|auth\/register)/;
 const smallJson = express.json();
 app.use((req, res, next) => (DOC_ROUTE.test(req.path) ? next() : smallJson(req, res, next)));
 

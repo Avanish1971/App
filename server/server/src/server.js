@@ -22,6 +22,7 @@ const salarySlipsRouter = require('./routes/salarySlips');
 const companyRouter = require('./routes/company');
 const employeePhotoRouter = require('./routes/employeePhoto');
 const photosRouter = require('./routes/photos');
+const slipDownloadRouter = require('./routes/slipDownload');
 const eventsRouter = require('./routes/events');
 const { requireRole, attendanceGuard, requestsGuard, tenantScope } = require('./middleware/auth');
 const { migrate } = require('./utils/migrate');
@@ -40,6 +41,7 @@ app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API r
 // Har route me `tenantScope` ke baad ka kaam sirf usi company ke data par chalta hai.
 const admin = requireRole('admin');
 app.use('/api/auth', authRouter);
+app.use('/api/slip-download', slipDownloadRouter); // 3 min ka signed link, login ke bina (token hi pehchan hai)
 app.use('/api/photos', photosRouter); // profile photo (random token wala link)
 app.use('/api/company', companyRouter); // public/logo bina login, baaki route khud guard karte hain
 app.use('/api/events', eventsRouter); // live stream (token URL me, route khud verify karta hai)

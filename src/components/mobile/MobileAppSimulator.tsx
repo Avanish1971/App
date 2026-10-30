@@ -236,7 +236,7 @@ export function MobileAppSimulator({
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-slate-500">Good Morning 👋</span>
               <span className={`px-1.5 py-0.2 rounded font-mono text-[9px] font-bold ${employee.workType === 'FIELD_WORK' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
-                {employee.workType === 'FIELD_WORK' ? 'Field Work' : 'In-Office'}
+                {employee.workType === 'FIELD_WORK' ? 'Field Work' : 'WFO (Office)'}
               </span>
             </div>
             <div className="font-extrabold text-base text-slate-900 tracking-tight">{employee.fullName}</div>
@@ -318,6 +318,12 @@ export function MobileAppSimulator({
               </div>
             </div>
           </div>
+
+          {(attendance.totalOutMinutes || 0) > 0 && (
+            <div className="w-full py-2 px-3 rounded-xl text-[11px] font-medium text-center bg-amber-50 border border-amber-200 text-amber-800">
+              Aaj office se bahar: {attendance.totalOutMinutes} min ({(attendance.outings || []).length} baar)
+            </div>
+          )}
 
           {employee.workType === 'FIELD_WORK' && attendance.locationType && attendance.status !== 'SCHEDULED' && (
             <div

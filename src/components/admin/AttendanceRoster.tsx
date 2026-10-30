@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { OutingBadge } from './OutingBadge';
 import { Employee, AttendanceRecord, Office, Shift } from '../../types';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
@@ -82,7 +83,7 @@ export function AttendanceRoster({
         <div>
           <h3 className="font-bold text-slate-900 text-base">दैनिक उपस्थिति रजिस्टर (Daily Attendance Roster)</h3>
           <p className="text-xs text-slate-500">
-            Real-time verification with In-Office Geofencing & Field Staff Client Attendance
+            Real-time verification with WFO (Office) Geofencing & Field Staff Client Attendance
           </p>
         </div>
 
@@ -120,7 +121,7 @@ export function AttendanceRoster({
             className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-cyan-600 font-semibold focus:outline-none focus:border-indigo-500"
           >
             <option value="ALL">All Work Types (सभी)</option>
-            <option value="IN_OFFICE">🏢 In-Office Only (ऑफिस में)</option>
+            <option value="IN_OFFICE">🏢 WFO – Office se kaam (ऑफिस में)</option>
             <option value="FIELD_WORK">🚗 Field Work Only (फील्ड में)</option>
           </select>
         </div>
@@ -230,7 +231,7 @@ export function AttendanceRoster({
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                           <Building className="w-3 h-3 text-indigo-600" />
-                          <span>In-Office</span>
+                          <span>WFO (Office)</span>
                         </span>
                       )}
                     </td>
@@ -276,6 +277,7 @@ export function AttendanceRoster({
                               FIELD PAR
                             </span>
                           )}
+                          <OutingBadge record={record} />
                           {record?.signalLost && (
                             <span
                               className="text-[9px] font-mono font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200"

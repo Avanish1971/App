@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X, User, FileText, Download, Loader2, Briefcase, Building, Phone, Mail, CalendarDays, UserCog, BadgeCheck } from 'lucide-react';
 import { Employee, Office, SalarySlip } from '../../types';
-import { getMySalarySlipsApi, fetchMySalarySlipBlob } from '../../lib/api';
-import { saveBlobToDevice } from '../../lib/saveFile';
+import { getMySalarySlipsApi, fetchMySalarySlipBlob, getMySalarySlipLinkApi } from '../../lib/api';
+import { saveBlobToDevice, canSaveNatively } from '../../lib/saveFile';
 import { useCompany } from '../../lib/useCompany';
 
 interface ProfileModuleProps {
@@ -58,12 +58,29 @@ export function ProfileModule({ employee, office, onClose }: ProfileModuleProps)
     loadSlips();
   }, []);
 
+  // Phone ke browser me kholo (3 minute ka link) — file-save plugin na ho tab bhi download ho jata hai
+  const openInBrowser = async (s: SalarySlip) => {
+    const url = await getMySalarySlipLinkApi(s.id);
+    window.open(url, '_blank');
+  };
+
   const download = async (s: SalarySlip) => {
     setBusyId(s.id);
     setError(null);
     try {
-      const blob = await fetchMySalarySlipBlob(s.id);
-      await saveBlobToDevice(blob, `SalarySlip-${s.month}.${extFor(s.mimeType)}`);
+      if (!canSaveNatively()) {
+        // Purana APK: Filesystem/Share plugin nahi hai
+        await openInBrowser(s);
+        return;
+      }
+      try {
+        const blob = await fetchMySalarySlipBlob(s.id);
+        await saveBlobToDevice(blob, `SalarySlip-${s.month}.${extFor(s.mimeType)}`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        if (/not implemented|unimplemented|not available/i.test(msg)) await openInBrowser(s);
+        else throw e;
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       // Share sheet band kar di to error nahi hai
@@ -131,7 +148,7 @@ export function ProfileModule({ employee, office, onClose }: ProfileModuleProps)
             <Row icon={Building} label="Branch" value={`${office.name}${office.city ? ` (${office.city})` : ''}`} />
             <Row icon={CalendarDays} label="Joining Date" value={fmtDate(employee.joiningDate)} />
             <Row icon={UserCog} label="Reporting Manager" value={employee.reportingManager} />
-            <Row icon={Briefcase} label="Work Type" value={employee.workType === 'FIELD_WORK' ? 'Field Work' : 'In-Office'} />
+            <Row icon={Briefcase} label="Work Type" value={employee.workType === 'FIELD_WORK' ? 'Field Work' : 'WFO (Office)'} />
             {employee.workMode === 'TRAINING' && (
               <Row icon={CalendarDays} label="Training Period" value={`${employee.trainingMonths} mahine · ${fmtDate(employee.trainingEndDate)} tak`} />
             )}

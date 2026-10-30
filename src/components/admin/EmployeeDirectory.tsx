@@ -391,7 +391,7 @@ export function EmployeeDirectory({
                   label="Employment Type"
                   value={employee.employmentType?.replace('_', ' ')}
                 />
-                <Field label="Work Type" value={employee.workType === 'FIELD_WORK' ? 'Field Work' : 'In-Office'} />
+                <Field label="Work Type" value={employee.workType === 'FIELD_WORK' ? 'Field Work' : 'WFO (Office)'} />
                 <Field label="Reporting Manager" value={employee.reportingManager} />
                 <Field label="Shift" value={shift ? `${shift.name} (${shift.startTime} – ${shift.endTime})` : ''} />
               </div>

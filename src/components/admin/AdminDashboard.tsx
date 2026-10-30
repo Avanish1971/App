@@ -25,6 +25,8 @@ import { MonthlyAttendanceReport } from './MonthlyAttendanceReport';
 import { EmployeeDirectory } from './EmployeeDirectory';
 import { MessageCenter } from './MessageCenter';
 import { FieldVisitsPanel } from './FieldVisitsPanel';
+import { KpiCards } from './KpiCards';
+import { OutingList } from './OutingBadge';
 import type { PendingDocument } from '../../lib/files';
 import type { PickedPhoto } from './AvatarPicker';
 import {
@@ -189,78 +191,14 @@ export function AdminDashboard({
         </div>
       </div>
 
-      {/* Top Executive KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Total Staff */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] uppercase font-bold">Total Staff</span>
-            <Users className="w-3.5 h-3.5 text-indigo-600" />
-          </div>
-          <div className="text-xl font-extrabold text-slate-900 font-mono">{totalEmployees}</div>
-          <div className="text-[10px] text-slate-500">Across {citiesCount} {citiesCount === 1 ? 'City' : 'Cities'}</div>
-        </div>
-
-        {/* Present */}
-        <div className="bg-white border border-emerald-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-emerald-600">
-            <span className="text-[10px] uppercase font-bold">Present Today</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-          </div>
-          <div className="text-xl font-extrabold text-emerald-600 font-mono">{presentToday}</div>
-          <div className="text-[10px] text-slate-500">{attendancePercent}% Attendance</div>
-        </div>
-
-        {/* Absent */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] uppercase font-bold">Absent</span>
-            <XCircle className="w-3.5 h-3.5 text-rose-600" />
-          </div>
-          <div className="text-xl font-extrabold text-rose-600 font-mono">{absentToday}</div>
-          <div className="text-[10px] text-slate-500">LOP Processing</div>
-        </div>
-
-        {/* On Leave */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] uppercase font-bold">On Leave</span>
-            <Calendar className="w-3.5 h-3.5 text-purple-600" />
-          </div>
-          <div className="text-xl font-extrabold text-purple-600 font-mono">{onLeaveToday}</div>
-          <div className="text-[10px] text-slate-500">Approved Quota</div>
-        </div>
-
-        {/* WFH */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] uppercase font-bold">WFH / Field</span>
-            <Home className="w-3.5 h-3.5 text-cyan-600" />
-          </div>
-          <div className="text-xl font-extrabold text-cyan-600 font-mono">{wfhToday}</div>
-          <div className="text-[10px] text-slate-500">Remote Checked</div>
-        </div>
-
-        {/* Late Today */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[10px] uppercase font-bold">Late Arrival</span>
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-          </div>
-          <div className="text-xl font-extrabold text-amber-600 font-mono">{lateToday}</div>
-          <div className="text-[10px] text-slate-500">&gt; 15 min grace</div>
-        </div>
-
-        {/* Approvals Pending */}
-        <div className="bg-white border border-indigo-200 rounded-xl p-3.5 space-y-1">
-          <div className="flex items-center justify-between text-indigo-600">
-            <span className="text-[10px] uppercase font-bold">Approvals</span>
-            <FileCheck className="w-3.5 h-3.5 text-indigo-600" />
-          </div>
-          <div className="text-xl font-extrabold text-indigo-600 font-mono">{pendingApprovalsCount}</div>
-          <div className="text-[10px] text-slate-500">Action Required</div>
-        </div>
-      </div>
+      {/* Top KPI Cards: total, present, WFO, field, aaye nahi, bahar, late, half day... */}
+      <KpiCards
+        employees={employees}
+        attendanceRecords={attendanceRecords}
+        leaves={leaves}
+        citiesCount={citiesCount}
+        pendingApprovals={pendingApprovalsCount}
+      />
 
       {/* Tab Panels */}
       <div>
@@ -375,7 +313,7 @@ export function AdminDashboard({
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                        <Building className="w-3 h-3 text-indigo-600" /> In-Office
+                        <Building className="w-3 h-3 text-indigo-600" /> WFO (Office)
                       </span>
                     )}
                   </div>
@@ -439,6 +377,13 @@ export function AdminDashboard({
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Office se bahar jaana-aana (aaj)
+              </div>
+              <OutingList record={inspectAuditEmployee.record} />
+            </div>
 
             <div className="space-y-2">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">

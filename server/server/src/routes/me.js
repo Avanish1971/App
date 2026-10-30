@@ -11,6 +11,7 @@ const SalarySlip = require('../models/SalarySlip');
 const { forEmployee } = require('./messages');
 const { todayIST, nowTimeIST } = require('../utils/time');
 const { getBalance } = require('../utils/leaveBalance');
+const { sign } = require('../utils/token');
 const { broadcastAdmin } = require('../utils/realtime');
 
 // GET /api/me -> login kiye hue employee ka apna data (doosron ka kuch nahi, password bhi nahi)
@@ -159,6 +160,18 @@ router.get('/salary-slips', async (req, res) => {
   try {
     const list = await SalarySlip.find({ employeeId: req.auth.employeeId }, '-data').sort({ month: -1 }).lean();
     res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/me/salary-slips/:slipId/link -> 3 minute ka download link (plugin ke bina phone browser se download ke liye)
+router.post('/salary-slips/:slipId/link', async (req, res) => {
+  try {
+    const s = await SalarySlip.findOne({ id: req.params.slipId, employeeId: req.auth.employeeId }, 'id');
+    if (!s) return res.status(404).json({ error: 'Salary slip nahi mili' });
+    const token = sign({ t: 'slipdl', slipId: s.id, companyId: req.auth.companyId, employeeId: req.auth.employeeId }, 180);
+    res.json({ path: `/api/slip-download/${token}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

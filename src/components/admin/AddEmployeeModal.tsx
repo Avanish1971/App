@@ -340,7 +340,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
               <div>
                 <label className={labelCls}>काम का प्रकार (Work Type)</label>
                 <select value={workType} onChange={(e) => setWorkType(e.target.value as 'IN_OFFICE' | 'FIELD_WORK')} className={inputCls}>
-                  <option value="IN_OFFICE">In-Office (ऑफिस में)</option>
+                  <option value="IN_OFFICE">WFO – Office se kaam (ऑफिस में)</option>
                   <option value="FIELD_WORK">Field Work (फील्ड में)</option>
                 </select>
               </div>

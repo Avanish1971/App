@@ -32,6 +32,12 @@ export async function saveBlobToDevice(blob: Blob, fileName: string): Promise<vo
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+// Phone ke APK me file-save (Filesystem) aur share plugin maujood hain ya nahi (purane APK me nahi hote)
+export function canSaveNatively(): boolean {
+  if (!Capacitor.isNativePlatform()) return true; // browser: seedha download
+  return Capacitor.isPluginAvailable('Filesystem') && Capacitor.isPluginAvailable('Share');
+}
+
 // Admin ke liye: naye tab me kholo
 export function openBlobInNewTab(blob: Blob) {
   const url = URL.createObjectURL(blob);

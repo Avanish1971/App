@@ -172,6 +172,8 @@ export interface AttendanceRecord {
   lastDistanceMeters?: number;
   insideGeofence?: boolean;
   signalLost?: boolean; // true = location nahi aa rahi (app/location band)
+  outings?: Outing[]; // office se bahar jaana-aana
+  totalOutMinutes?: number;
   locationType?: 'OFFICE' | 'FIELD'; // field staff abhi office me hai ya field par
   clientVisit?: ClientVisitSummary;
   clientVisits?: ClientVisitSummary[];
@@ -208,6 +210,15 @@ export interface ClientVisit {
   longitude: number;
   accuracy?: number;
   visitedAt: string;
+}
+
+// Office se ek baar bahar jaana (kab gaya, kab wapas aaya, kitne minute)
+export interface Outing {
+  leftAt: string;
+  leftTime: string;
+  returnedAt?: string;
+  returnedTime?: string;
+  minutes?: number;
 }
 
 export interface AttendanceEvent {

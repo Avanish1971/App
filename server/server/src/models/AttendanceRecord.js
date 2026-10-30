@@ -51,6 +51,16 @@ const AttendanceRecordSchema = new mongoose.Schema({
   // Geofence tracking (server khud bharta hai)
   outsideSince: Date,
   lastPingAt: Date,
+  // Office se bahar jaana-aana: kab gaya, kab wapas aaya, kitne minute bahar raha
+  outings: [{
+    _id: false,
+    leftAt: String, // ISO
+    leftTime: String, // "11:20 AM"
+    returnedAt: String,
+    returnedTime: String,
+    minutes: Number,
+  }],
+  totalOutMinutes: { type: Number, default: 0 },
   locationType: String, // field staff: 'OFFICE' (office me) / 'FIELD' (bahar)
   signalLost: Boolean, // true = kuch minute se location nahi aa rahi (app band / location band)
   lastLat: Number,

@@ -348,4 +348,9 @@ export async function fetchProtectedBlob(path: string): Promise<Blob> {
 }
 export const fetchEmployeeSalarySlipBlob = (employeeId: string, slipId: string) =>
   fetchProtectedBlob(`/api/employees/${employeeId}/salary-slips/${slipId}/file`);
+// 3 minute ka download link: phone me file-save plugin na ho to browser me khol kar download karte hain
+export const getMySalarySlipLinkApi = async (slipId: string) => {
+  const { path } = await request<{ path: string }>(`/api/me/salary-slips/${slipId}/link`, { method: 'POST' });
+  return `${BASE_URL}${path}`;
+};
 export const fetchMySalarySlipBlob = (slipId: string) => fetchProtectedBlob(`/api/me/salary-slips/${slipId}/file`);

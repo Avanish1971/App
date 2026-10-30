@@ -43,6 +43,25 @@ function newEvent(eventType, lat, lng, accuracy, note) {
   };
 }
 
+// Office se bahar jaana-aana ka hisaab (kab gaya, kab aaya, kitne minute bahar)
+function trackOuting(record, inside, canOpen) {
+  const last = record.outings && record.outings.length ? record.outings[record.outings.length - 1] : null;
+  const isOpen = Boolean(last && !last.returnedAt);
+  if (!inside && canOpen && !isOpen) {
+    record.outings.push({ leftAt: new Date().toISOString(), leftTime: nowTimeIST() });
+    return null;
+  }
+  if (inside && isOpen) {
+    const minutes = Math.max(0, Math.round((Date.now() - new Date(last.leftAt).getTime()) / 60000));
+    last.returnedAt = new Date().toISOString();
+    last.returnedTime = nowTimeIST();
+    last.minutes = minutes;
+    record.totalOutMinutes = (record.totalOutMinutes || 0) + minutes;
+    return minutes;
+  }
+  return null;
+}
+
 // Employee office ke radius se grace time se zyada bahar raha: din band karo.
 //  - Shift ke BEECH me gaya  -> HALF DAY
 //  - Shift khatam hone ke time (ya baad) gaya -> CHECKED_OUT (din poora)
@@ -131,6 +150,15 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
+  // Bahar gaya / wapas aaya ka hisaab (field staff: office se field par jaana bhi ginte hain)
+  const isFieldStaff = employee.workType === 'FIELD_WORK';
+  const returnedAfter = trackOuting(record, inside, isFieldStaff ? record.locationType === 'OFFICE' : record.status === 'PRESENT');
+  if (returnedAfter !== null && !isFieldStaff) {
+    record.events.push(
+      newEvent('GEOFENCE_ENTER', lat, lng, accuracy,
+        `${office.name} me wapas aaye. ${returnedAfter < 1 ? '1 min se kam' : `${returnedAfter} min`} bahar the (aaj kul ${record.totalOutMinutes} min)`)
+    );
+  }
   // Field staff: hamesha field par nahi hote. Office ke radius me aate hi PRESENT (office me kaam),
   // bahar nikalte hi ON_DUTY (field par). Office se bahar jaane par kabhi ABSENT/HALF DAY nahi lagta.
   if (employee.workType === 'FIELD_WORK') {
@@ -148,7 +176,7 @@ async function processPingInner(employeeId, ping) {
           record.checkInAccuracy = accuracy;
           record.source = 'AUTO_GEOFENCE';
         }
-        record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye: office me kaam (${dist}m door)`));
+        record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye: office me kaam (${dist}m door)${returnedAfter !== null ? `. ${returnedAfter} min field par the (aaj kul ${record.totalOutMinutes} min)` : ''}`));
         if (firstTime) record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, 'Auto check-in (office): PRESENT'));
       }
     } else if (record.status === 'PRESENT' && wasAt !== 'FIELD') {

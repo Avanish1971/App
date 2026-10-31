@@ -47,7 +47,7 @@ export function AttendanceRoster({
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   const departments = ['ALL', 'Engineering', 'HR', 'Finance', 'Sales', 'Operations'];
-  const statuses = ['ALL', 'PRESENT', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK', 'WFH', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
+  const statuses = ['ALL', 'PRESENT', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
 
   const filtered = employees.filter((emp) => {
     const matchesSearch =
@@ -252,8 +252,6 @@ export function AttendanceRoster({
                                 ? 'bg-emerald-400'
                                 : status === 'ON_BREAK' || status === 'HALF_DAY'
                                 ? 'bg-amber-400'
-                                : status === 'WFH'
-                                ? 'bg-cyan-400'
                                 : status === 'ON_LEAVE'
                                 ? 'bg-purple-400'
                                 : 'bg-rose-400'

@@ -129,18 +129,28 @@ export function MobileAppSimulator({
     return () => clearInterval(interval);
   }, [attendance.status]);
 
-  // Check-In Action
+  // Check-In Action: sirf office ke radius ke andar. Bahar se check-in nahi hota (koi WFH nahi).
+  const [checkInMsg, setCheckInMsg] = useState<string | null>(null);
   const handleCheckIn = () => {
+    if (!(hasFix && geoResult.isInside)) {
+      setCheckInMsg(
+        hasFix
+          ? 'Aap office ke radius ke bahar ho. Office me aate hi attendance apne aap lag jayegi.'
+          : 'Abhi aapki location nahi mil rahi. Phone ki Location (GPS) ON karo.'
+      );
+      return;
+    }
+    setCheckInMsg(null);
     const nowTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const newRecord: AttendanceRecord = {
       ...attendance,
-      status: hasFix && geoResult.isInside ? 'PRESENT' : 'WFH',
+      status: 'PRESENT',
       checkInTime: nowTime,
       checkInLat: userLat,
       checkInLng: userLng,
       checkInAccuracy: accuracy,
-      source: hasFix && geoResult.isInside ? 'AUTO_GEOFENCE' : 'MANUAL',
-      verificationStatus: hasFix && geoResult.isInside ? 'VERIFIED' : 'PENDING',
+      source: 'AUTO_GEOFENCE',
+      verificationStatus: 'VERIFIED',
       events: [
         ...attendance.events,
         {
@@ -335,6 +345,12 @@ export function MobileAppSimulator({
             </div>
           )}
 
+          {attendance.status === 'ABSENT' && (
+            <div className="w-full py-2.5 px-3 border text-[11px] font-medium rounded-xl text-center bg-rose-50 border-rose-200 text-rose-700">
+              Aaj aap na office aaye, na field work kiya, isliye attendance ABSENT hai. Galti ho to Regularize karo.
+            </div>
+          )}
+
           {attendance.status === 'HALF_DAY' || attendance.status === 'CHECKED_OUT' ? (
             <div
               className={`w-full py-2.5 px-3 border text-[11px] font-medium rounded-xl text-center ${
@@ -363,13 +379,18 @@ export function MobileAppSimulator({
               </button>
             )
           ) : attendance.status === 'SCHEDULED' || attendance.status === 'OUTSIDE_GEOFENCE' ? (
-            <button
-              onClick={handleCheckIn}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg"
-            >
-              <MapPin className="w-4 h-4" />
-              Check-In (Office Geofence)
-            </button>
+            <>
+              <button
+                onClick={handleCheckIn}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg"
+              >
+                <MapPin className="w-4 h-4" />
+                Check-In (Office Geofence)
+              </button>
+              {checkInMsg && (
+                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">{checkInMsg}</div>
+              )}
+            </>
           ) : (
             <button
               onClick={handleToggleBreak}

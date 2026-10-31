@@ -106,7 +106,7 @@ export function GeofenceMap({
               const att = attendanceRecords.find((a) => a.employeeId === emp.id);
               const isPresent = att?.status === 'PRESENT';
               const isOnBreak = att?.status === 'ON_BREAK';
-              const isWFH = att?.status === 'WFH';
+              const isField = att?.status === 'ON_DUTY'; // field par
               const dist = calculateDistanceMeters(
                 emp.currentLat,
                 emp.currentLng,
@@ -143,7 +143,7 @@ export function GeofenceMap({
                           ? 'bg-emerald-400'
                           : isOnBreak
                           ? 'bg-amber-400'
-                          : isWFH
+                          : isField
                           ? 'bg-cyan-400'
                           : 'bg-rose-400'
                       }`}
@@ -164,7 +164,7 @@ export function GeofenceMap({
                 <span className="w-2 h-2 rounded-full bg-amber-400" /> On Break
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-cyan-400" /> WFH / Field
+                <span className="w-2 h-2 rounded-full bg-cyan-400" /> Field Par
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-rose-400" /> Absent

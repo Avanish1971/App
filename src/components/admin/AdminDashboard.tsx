@@ -126,7 +126,6 @@ export function AdminDashboard({
   ).length;
   const absentToday = attendanceRecords.filter((a) => a.status === 'ABSENT').length;
   const onLeaveToday = attendanceRecords.filter((a) => a.status === 'ON_LEAVE').length;
-  const wfhToday = attendanceRecords.filter((a) => a.status === 'WFH').length;
   const lateToday = attendanceRecords.filter((a) => a.isLate).length;
   const attendancePercent = totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0;
   const citiesCount = new Set(offices.map((o) => o.city)).size;

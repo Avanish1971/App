@@ -393,6 +393,8 @@ export default function AdminApp() {
       );
     } else if (rec.status === 'HALF_DAY' && prev?.status !== 'HALF_DAY') {
       pushToast({ kind: 'late', title: `${name} shift ke beech me office se chala gaya: HALF DAY`, detail: 'Radius ke bahar grace time se zyada raha' });
+    } else if (rec.status === 'ABSENT' && data.reason === 'AUTO_ABSENT') {
+      pushToast({ kind: 'absent', title: `${name} aaj nahi aaya: ABSENT`, detail: 'Shift khatam: na office aaya, na field work kiya' });
     } else if (rec.status === 'ABSENT' && prev?.status !== 'ABSENT') {
       pushToast({ kind: 'absent', title: `${name} office se bahar gaya: ABSENT`, detail: 'Radius ke bahar grace time se zyada raha' });
     }

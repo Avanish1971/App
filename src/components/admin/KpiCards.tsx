@@ -11,7 +11,7 @@ interface KpiCardsProps {
   pendingApprovals: number;
 }
 
-const CAME = ['PRESENT', 'ON_DUTY', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK', 'WFH'];
+const CAME = ['PRESENT', 'ON_DUTY', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK'];
 
 // Dashboard ke upar ke KPI: kitne employee, kitne aaye, office me, field par, nahi aaye, bahar gaye...
 export function KpiCards({ employees, attendanceRecords, leaves, citiesCount, pendingApprovals }: KpiCardsProps) {
@@ -23,7 +23,7 @@ export function KpiCards({ employees, attendanceRecords, leaves, citiesCount, pe
       leaves.filter((l) => l.status === 'APPROVED' && l.startDate <= today && l.endDate >= today).map((l) => l.employeeId)
     );
 
-    const c = { total: active.length, came: 0, wfo: 0, field: 0, notArrived: 0, late: 0, half: 0, leave: 0, absent: 0, out: 0, wfh: 0 };
+    const c = { total: active.length, came: 0, wfo: 0, field: 0, notArrived: 0, late: 0, half: 0, leave: 0, absent: 0, out: 0 };
     for (const e of active) {
       const r = recOf.get(e.id);
       const onLeave = leaveIds.has(e.id) || r?.status === 'ON_LEAVE';
@@ -33,16 +33,13 @@ export function KpiCards({ employees, attendanceRecords, leaves, citiesCount, pe
       }
       const came = Boolean(r && (r.checkInTime || CAME.includes(r.status)));
       if (came) c.came += 1;
-      else if (r?.status === 'ABSENT') c.absent += 1;
-      else c.notArrived += 1;
+      else c.notArrived += 1; // aaya nahi (ABSENT bhi isi me)
       if (!r) continue;
 
       const isOut = Boolean(openOuting(r) || r.outsideSince);
       const isField = e.workType === 'FIELD_WORK';
       if (r.isLate) c.late += 1;
       if (r.status === 'HALF_DAY') c.half += 1;
-      if (r.status === 'ABSENT' && came) c.absent += 1;
-      if (r.status === 'WFH') c.wfh += 1;
       if (r.status === 'ON_DUTY') c.field += 1;
       if (isField ? r.status === 'PRESENT' && r.locationType === 'OFFICE' : (r.status === 'PRESENT' || r.status === 'ON_BREAK') && !isOut) c.wfo += 1;
       if (!isField && r.status === 'PRESENT' && isOut) c.out += 1;
@@ -57,7 +54,7 @@ export function KpiCards({ employees, attendanceRecords, leaves, citiesCount, pe
     { label: 'Total Staff', value: k.total, sub: `${citiesCount} ${citiesCount === 1 ? 'City' : 'Cities'}`, Icon: Users, tone: 'text-slate-900', icon: 'text-indigo-600', border: 'border-slate-200' },
     { label: 'Present Today', value: k.came, sub: `${pct}% · office me ${k.wfo + k.out}, field par ${k.field}`, Icon: CheckCircle2, tone: 'text-emerald-600', icon: 'text-emerald-600', border: 'border-emerald-200' },
     { label: 'Field Par', value: k.field, sub: 'abhi client / field duty par', Icon: Briefcase, tone: 'text-cyan-600', icon: 'text-cyan-600', border: 'border-cyan-200' },
-    { label: 'Aaye Nahi', value: k.notArrived, sub: 'abhi tak check-in nahi', Icon: UserX, tone: 'text-slate-700', icon: 'text-slate-500', border: 'border-slate-200' },
+    { label: 'Aaye Nahi', value: k.notArrived, sub: 'check-in nahi / absent', Icon: UserX, tone: 'text-slate-700', icon: 'text-slate-500', border: 'border-slate-200' },
     { label: 'Approvals', value: pendingApprovals, sub: 'action required', Icon: FileCheck, tone: 'text-indigo-600', icon: 'text-indigo-600', border: 'border-indigo-200' },
   ];
 

@@ -15,7 +15,7 @@ const { runWithTenant } = require('./tenant');
 const Company = require('../models/Company');
 
 // In status wale employees ka attendance GPS se nahi badalta
-const PROTECTED_STATUSES = ['ON_LEAVE', 'WFH', 'ON_DUTY', 'ON_BREAK', 'HALF_DAY', 'CHECKED_OUT'];
+const PROTECTED_STATUSES = ['ON_LEAVE', 'ON_DUTY', 'ON_BREAK', 'HALF_DAY', 'CHECKED_OUT'];
 
 function httpError(status, message) {
   const e = new Error(message);
@@ -150,6 +150,15 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
+  // Shift khatam ho chuka aur aaj koi aaya hi nahi tha (ABSENT lag chuka): ab GPS se status nahi badlega
+  if (record.status === 'ABSENT' && !record.checkInTime) {
+    const dayShift = await Shift.findOne({ id: record.shiftId || employee.shiftId });
+    const dayEnd = dayShift && !dayShift.isOvernight ? parseClock(dayShift.endTime) : null;
+    if (dayEnd !== null && minutesNowIST() >= dayEnd) {
+      await record.save();
+      return { ...base, ignored: 'DAY_CLOSED' };
+    }
+  }
   // Bahar gaya / wapas aaya ka hisaab (field staff: office se field par jaana bhi ginte hain)
   const isFieldStaff = employee.workType === 'FIELD_WORK';
   const returnedAfter = trackOuting(record, inside, isFieldStaff ? record.locationType === 'OFFICE' : record.status === 'PRESENT');
@@ -187,7 +196,7 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return base;
   }
-  // Leave/WFH/on-duty/break wale: status GPS se nahi badalta
+  // Leave/on-duty/break/half-day wale: status GPS se nahi badalta
   if (PROTECTED_STATUSES.includes(record.status)) {
     await record.save();
     return { ...base, ignored: 'PROTECTED' };
@@ -336,6 +345,60 @@ async function markNoShowsLate() {
   return count;
 }
 
+// Shift khatam ho gaya aur employee na office aaya (GPS) na field work (client check-in) kiya -> ABSENT.
+// (Approved leave, weekly off wale nahi. Office staff aur field staff dono par lagta hai.)
+async function markAbsentNoShows() {
+  if (WEEKLY_OFF.includes(weekdayIST())) return 0;
+  const date = todayIST();
+  const nowMin = minutesNowIST();
+  const [employees, shifts, records, leaves] = await Promise.all([
+    Employee.find({ status: { $ne: 'INACTIVE' } }).lean(),
+    Shift.find().lean(),
+    AttendanceRecord.find({ date }).lean(),
+    LeaveRequest.find({ status: 'APPROVED', startDate: { $lte: date }, endDate: { $gte: date } }).lean(),
+  ]);
+  const onLeave = new Set(leaves.map((l) => l.employeeId));
+  const byEmp = new Map(records.map((r) => [r.employeeId, r]));
+  let count = 0;
+
+  for (const emp of employees) {
+    const shift = shifts.find((s) => s.id === emp.shiftId);
+    if (!shift || shift.isOvernight) continue;
+    const end = parseClock(shift.endTime);
+    if (end === null || nowMin < end) continue; // shift abhi chal rahi hai
+    if (onLeave.has(emp.id)) continue;
+    const rec = byEmp.get(emp.id);
+    if (rec && (rec.checkInTime || rec.status !== 'SCHEDULED')) continue; // aaya tha, ya pehle se koi status hai
+
+    try {
+      const updated = await AttendanceRecord.findOneAndUpdate(
+        { employeeId: emp.id, date, checkInTime: { $exists: false }, status: { $in: ['SCHEDULED'] } },
+        {
+          $set: { status: 'ABSENT', isLate: false },
+          $setOnInsert: {
+            id: `att_${emp.id}_${date}`,
+            officeId: emp.officeId,
+            shiftId: emp.shiftId,
+            source: 'AUTO_GEOFENCE',
+            verificationStatus: 'PENDING',
+          },
+          $push: {
+            events: newEvent('ABSENT_MARK', undefined, undefined, 0,
+              `Shift ${shift.endTime} tak na office aaye, na field work ka check-in kiya -> ABSENT`),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      broadcastAdmin('attendance', { record: updated.toObject(), reason: 'AUTO_ABSENT' });
+      count += 1;
+    } catch (err) {
+      // Dusra record pehle se ban chuka (race) to chhod do
+      if (err && err.code !== 11000) console.error('Absent mark error:', emp.id, err.message);
+    }
+  }
+  return count;
+}
+
 // Kuch minute se location nahi aa rahi (app band / phone off / location band) -> admin ko turant batao.
 // Attendance status yahan nahi badalta; sirf alert + event record hota hai.
 const SIGNAL_LOST_MINUTES = Number(process.env.SIGNAL_LOST_MINUTES) || 5;
@@ -390,6 +453,7 @@ async function sweepAllCompanies() {
     await runWithTenant(c.id, async () => {
       await sweepExpiredExits().catch((err) => console.error('Geofence sweeper error:', err.message));
       await markNoShowsLate().catch((err) => console.error('Late sweeper error:', err.message));
+      await markAbsentNoShows().catch((err) => console.error('Absent sweeper error:', err.message));
       await checkSignalLost().catch((err) => console.error('Signal sweeper error:', err.message));
     });
   }
@@ -407,4 +471,4 @@ function startSweeper() {
   console.log('Geofence sweeper chalu (har 60 sec, har company ke liye)');
 }
 
-module.exports = { processPing, sweepExpiredExits, markNoShowsLate, checkSignalLost, sweepAllCompanies, startSweeper };
+module.exports = { processPing, sweepExpiredExits, markNoShowsLate, markAbsentNoShows, checkSignalLost, sweepAllCompanies, startSweeper };

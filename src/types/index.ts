@@ -239,7 +239,8 @@ export interface AttendanceEvent {
     | 'REGULARIZATION_APPLIED'
     | 'LATE_MARK'
     | 'SIGNAL_LOST'
-    | 'SIGNAL_RESTORED';
+    | 'SIGNAL_RESTORED'
+    | 'ABSENT_MARK';
   latitude: number;
   longitude: number;
   accuracy: number;

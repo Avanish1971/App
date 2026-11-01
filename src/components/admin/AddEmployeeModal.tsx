@@ -174,7 +174,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      avatar: `https://images.unsplash.com/photo-${1534528741775 + (employees.length % 10)}?auto=format&fit=crop&w=200&h=200&q=80`,
+      avatar: '', // photo baad me upload hoti hai; tab tak naam ke akshar wala avatar dikhta hai
       department,
       designation: designation.trim(),
       branch: office.city,

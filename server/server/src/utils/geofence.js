@@ -104,15 +104,22 @@ async function processPingInner(employeeId, ping) {
   if (!employee) throw httpError(404, 'Employee nahi mila');
   if (employee.status === 'INACTIVE') throw httpError(403, 'Employee ID deactivate hai');
 
-  // Admin ke Live Radar ke liye employee ki taaza location
-  await Employee.updateOne({ id: employeeId }, { currentLat: lat, currentLng: lng, accuracyMeters: accuracy });
+  const policy = await getPolicy();
+
+  // Admin ke Live Radar ke liye employee ki taaza location.
+  // Bahut kharab fix (100m se zyada galti) se radar me dot idhar-udhar na uchhle, isliye use save nahi karte.
+  if (!(accuracy > 100)) {
+    await Employee.updateOne({ id: employeeId }, { currentLat: lat, currentLng: lng, accuracyMeters: accuracy });
+  }
 
   const office = await Office.findOne({ id: employee.officeId });
   if (!office) return { record: null, inside: null, reason: 'NO_OFFICE' };
 
-  const policy = await getPolicy();
   const dist = distanceMeters(lat, lng, office.latitude, office.longitude);
-  const inside = dist <= office.radiusMeters;
+  // GPS ki galti (accuracy) bhi ginte hain: agar "galti ka gola" office ke radius ko chhu raha hai to employee andar maana jata hai.
+  // (Office ke andar baithe GPS 20-50m idhar-udhar hota hai; sirf seedhi doori dekhne se baar-baar "bahar" ban jata tha.)
+  const slack = Math.min(accuracy, policy.gpsAccuracyMaxMeters);
+  const inside = dist - slack <= office.radiusMeters;
   const date = todayIST();
 
   // Aaj ka record (nahi hai to ban jata hai)
@@ -141,7 +148,6 @@ async function processPingInner(employeeId, ping) {
   record.lastLat = lat;
   record.lastLng = lng;
   record.lastDistanceMeters = dist;
-  record.insideGeofence = inside;
 
   const base = { record, inside, distanceMeters: dist, officeName: office.name, restored };
 
@@ -150,6 +156,7 @@ async function processPingInner(employeeId, ping) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
+  record.insideGeofence = inside; // kamzor GPS se ye flag nahi badalta (baar-baar andar/bahar na ho)
   // Shift khatam ho chuka aur aaj koi aaya hi nahi tha (ABSENT lag chuka): ab GPS se status nahi badlega
   if (record.status === 'ABSENT' && !record.checkInTime) {
     const dayShift = await Shift.findOne({ id: record.shiftId || employee.shiftId });

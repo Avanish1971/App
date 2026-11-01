@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Avatar } from './Avatar';
 import { Employee, AttendanceRecord, Office, Shift } from '../../types';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
@@ -235,12 +236,7 @@ export function EmployeeDirectory({
                     }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-0"
                   >
-                    <img
-                      src={e.avatar}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="w-8 h-8 rounded-full border border-slate-300 object-cover"
-                    />
+                    <Avatar src={e.avatar} name={e.fullName} className="w-8 h-8 rounded-full border border-slate-300 object-cover" />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-slate-900 truncate">{e.fullName}</div>
                       <div className="text-[10px] text-slate-500 truncate">

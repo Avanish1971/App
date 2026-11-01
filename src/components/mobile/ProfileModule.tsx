@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Avatar } from '../admin/Avatar';
 import { X, User, FileText, Download, Loader2, Briefcase, Building, Phone, Mail, CalendarDays, UserCog, BadgeCheck } from 'lucide-react';
 import { Employee, Office, SalarySlip } from '../../types';
 import { getMySalarySlipsApi, fetchMySalarySlipBlob, getMySalarySlipLinkApi } from '../../lib/api';
@@ -102,7 +103,7 @@ export function ProfileModule({ employee, office, onClose }: ProfileModuleProps)
 
       {/* Profile top */}
       <div className="px-4 pt-4 pb-3 bg-gradient-to-b from-blue-50 to-slate-50 flex items-center gap-3">
-        <img src={employee.avatar} alt={employee.fullName} className="w-14 h-14 rounded-full border-2 border-blue-400 object-cover" />
+        <Avatar src={employee.avatar} name={employee.fullName} className="w-14 h-14 rounded-full border-2 border-blue-400 object-cover" />
         <div className="min-w-0">
           <div className="font-extrabold text-slate-900 text-base truncate">{employee.fullName}</div>
           <div className="text-[11px] text-slate-500 truncate">

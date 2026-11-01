@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Avatar } from './Avatar';
 import { Employee, AdminMessage } from '../../types';
 import { getMessagesApi, sendMessageApi } from '../../lib/api';
 import { useLiveEvents } from '../../lib/realtime';
@@ -123,7 +124,7 @@ export function MessageCenter({ employees }: { employees: Employee[] }) {
                 filtered.map((e) => (
                   <label key={e.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50">
                     <input type="checkbox" checked={selected.includes(e.id)} onChange={() => toggle(e.id)} className="accent-indigo-600" />
-                    <img src={e.avatar} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-full object-cover border border-slate-200" />
+                    <Avatar src={e.avatar} name={e.fullName} className="w-6 h-6 rounded-full object-cover border border-slate-200" />
                     <span className="text-xs font-semibold text-slate-900 flex-1 truncate">{e.fullName}</span>
                     <span className="text-[10px] text-slate-500 font-mono">{e.empId}</span>
                   </label>

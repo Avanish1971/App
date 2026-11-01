@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Avatar } from './Avatar';
 import { Employee } from '../../types';
 import { X, Trash2, AlertTriangle } from 'lucide-react';
 
@@ -50,12 +51,7 @@ export function DeleteEmployeeModal({ employee, onConfirm, onClose }: DeleteEmpl
         <div className="p-5 space-y-4 text-xs">
           {/* Employee card */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center gap-3">
-            <img
-              src={employee.avatar}
-              alt={employee.fullName}
-              referrerPolicy="no-referrer"
-              className="w-10 h-10 rounded-full border border-slate-300 object-cover"
-            />
+            <Avatar src={employee.avatar} name={employee.fullName} className="w-10 h-10 rounded-full border border-slate-300 object-cover" />
             <div className="min-w-0">
               <div className="font-bold text-slate-900 text-sm truncate">{employee.fullName}</div>
               <div className="text-[11px] text-slate-500 flex items-center gap-2">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Avatar } from '../admin/Avatar';
 import {
   Employee,
   Office,
@@ -256,7 +257,7 @@ export function MobileAppSimulator({
             <button onClick={onLogout} title="Logout" className="w-7 h-7 rounded-lg bg-white text-slate-500 flex items-center justify-center border border-slate-200 shadow-sm">
               <Lock className="w-3.5 h-3.5 text-slate-500" />
             </button>
-            <img src={employee.avatar} alt={employee.fullName} className="w-10 h-10 rounded-full border-2 border-blue-400 object-cover" />
+            <Avatar src={employee.avatar} name={employee.fullName} className="w-10 h-10 rounded-full border-2 border-blue-400 object-cover" />
           </div>
         </div>
 

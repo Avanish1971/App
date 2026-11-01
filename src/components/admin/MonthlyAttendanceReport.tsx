@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Avatar } from './Avatar';
 import { Employee, AttendanceRecord, Office } from '../../types';
 import { getAttendanceMonthApi } from '../../lib/api';
 import { Search, CalendarDays, ChevronRight } from 'lucide-react';
@@ -172,12 +173,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={emp.avatar}
-                          alt={emp.fullName}
-                          referrerPolicy="no-referrer"
-                          className="w-8 h-8 rounded-full border border-slate-300 object-cover"
-                        />
+                        <Avatar src={emp.avatar} name={emp.fullName} className="w-8 h-8 rounded-full border border-slate-300 object-cover" />
                         <div>
                           <div className="font-semibold text-slate-900">{emp.fullName}</div>
                           <div className="text-[10px] text-slate-500 font-mono">{emp.empId}</div>

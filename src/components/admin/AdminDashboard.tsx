@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Avatar } from './Avatar';
 import {
   Office,
   Employee,
@@ -297,12 +298,7 @@ export function AdminDashboard({
           <div className="bg-white border border-slate-300 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden p-5 space-y-4 text-xs">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center gap-3">
-                <img
-                  src={inspectAuditEmployee.employee.avatar}
-                  alt={inspectAuditEmployee.employee.fullName}
-                  referrerPolicy="no-referrer"
-                  className="w-9 h-9 rounded-full border border-slate-300 object-cover"
-                />
+                <Avatar src={inspectAuditEmployee.employee.avatar} name={inspectAuditEmployee.employee.fullName} className="w-9 h-9 rounded-full border border-slate-300 object-cover" />
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-slate-900 text-sm">{inspectAuditEmployee.employee.fullName}</h4>

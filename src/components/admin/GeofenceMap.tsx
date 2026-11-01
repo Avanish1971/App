@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Avatar } from './Avatar';
 import { Office, Employee, AttendanceRecord } from '../../types';
 import { calculateDistanceMeters, formatDistance } from '../../utils/geo';
 import { MapPin, Navigation, Shield, Users, Sliders, CheckCircle2 } from 'lucide-react';
@@ -114,11 +115,25 @@ export function GeofenceMap({
                 activeOffice.longitude
               );
 
-              // Pseudo scatter coordinates relative to center for clean visual layout
-              const angle = (idx * (360 / Math.max(1, officeEmployees.length)) * Math.PI) / 180;
-              const radiusScaled = Math.min(160, Math.max(45, (dist / activeOffice.radiusMeters) * 110));
-              const xPos = Math.cos(angle) * radiusScaled;
-              const yPos = Math.sin(angle) * radiusScaled;
+              // Asli radar: dot ki jagah employee ki sachi doori aur disha (north upar) se aati hai,
+              // aur wahi pixel-per-meter use hota hai jo geofence circle ka hai (isliye radius ke andar wala dot circle ke andar dikhta hai)
+              const ringPx = Math.min(380, activeOffice.radiusMeters * 3) / 2;
+              const pxPerMeter = ringPx / Math.max(1, activeOffice.radiusMeters);
+              const dEast = (emp.currentLng - activeOffice.longitude) * 111320 * Math.cos((activeOffice.latitude * Math.PI) / 180);
+              const dNorth = (emp.currentLat - activeOffice.latitude) * 110540;
+              let xPos = dEast * pxPerMeter;
+              let yPos = -dNorth * pxPerMeter;
+              const rPx = Math.hypot(xPos, yPos);
+              const MIN_PX = 30; // office pin ke upar na chadhe
+              const MAX_PX = 165; // bahut door wale radar ke kinare par
+              if (rPx < MIN_PX) {
+                const ang = rPx > 0.5 ? Math.atan2(yPos, xPos) : (idx * (360 / Math.max(1, officeEmployees.length)) * Math.PI) / 180;
+                xPos = Math.cos(ang) * MIN_PX;
+                yPos = Math.sin(ang) * MIN_PX;
+              } else if (rPx > MAX_PX) {
+                xPos = (xPos / rPx) * MAX_PX;
+                yPos = (yPos / rPx) * MAX_PX;
+              }
 
               return (
                 <button
@@ -131,12 +146,7 @@ export function GeofenceMap({
                   title={`${emp.fullName} - ${att?.status || 'SCHEDULED'}`}
                 >
                   <div className="relative">
-                    <img
-                      src={emp.avatar}
-                      alt={emp.fullName}
-                      referrerPolicy="no-referrer"
-                      className="w-7 h-7 rounded-full border-2 border-slate-100 object-cover shadow-md"
-                    />
+                    <Avatar src={emp.avatar} name={emp.fullName} className="w-7 h-7 rounded-full border-2 border-slate-100 object-cover shadow-md" />
                     <span
                       className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-slate-100 ${
                         isPresent
@@ -221,12 +231,7 @@ export function GeofenceMap({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <img
-                    src={selectedEmployee.avatar}
-                    alt={selectedEmployee.fullName}
-                    referrerPolicy="no-referrer"
-                    className="w-10 h-10 rounded-full border border-slate-300 object-cover"
-                  />
+                  <Avatar src={selectedEmployee.avatar} name={selectedEmployee.fullName} className="w-10 h-10 rounded-full border border-slate-300 object-cover" />
                   <div>
                     <div className="font-bold text-slate-900 text-sm">{selectedEmployee.fullName}</div>
                     <div className="text-[11px] text-slate-500">

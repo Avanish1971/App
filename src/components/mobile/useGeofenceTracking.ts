@@ -4,6 +4,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
 import { AttendanceRecord } from '../../types';
 import { sendLocationPingApi } from '../../lib/api';
+import { createGpsSmoother } from './smoothGps';
 
 // App minimize ho, screen band ho ya app background me ho: tab bhi location chalti rehti hai
 // (Android me upar notification dikhta hai, wahi "foreground service" hai jo tracking zinda rakhta hai)
@@ -37,10 +38,12 @@ export function useGeofenceTracking(employeeId: string | null, onRecord: (record
     let bgWatcherId: string | null = null;
     lastSentAt.current = 0;
     lastFixAt.current = Date.now();
+    const smooth = createGpsSmoother(); // GPS ka hilna kam karta hai
 
     // Ek location aayi: screen par dikhao aur (har 30 sec me) server ko bhejo
-    const handleFix = (p: LivePosition) => {
+    const handleFix = (raw: LivePosition) => {
       if (cancelled) return;
+      const p = smooth(raw);
       lastFixAt.current = Date.now();
       setStatus('granted');
       setPosition(p);

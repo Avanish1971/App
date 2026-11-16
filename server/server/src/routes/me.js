@@ -9,7 +9,7 @@ const Message = require('../models/Message');
 const ClientVisit = require('../models/ClientVisit');
 const SalarySlip = require('../models/SalarySlip');
 const { forEmployee } = require('./messages');
-const { todayIST, nowTimeIST } = require('../utils/time');
+const { todayIST, nowTimeIST, minutesNowIST, parseClock } = require('../utils/time');
 const { getBalance } = require('../utils/leaveBalance');
 const { sign } = require('../utils/token');
 const { broadcastAdmin } = require('../utils/realtime');
@@ -51,6 +51,13 @@ router.post('/client-visits', async (req, res) => {
     if (!emp || emp.status === 'INACTIVE') return res.status(403).json({ error: 'Aapki ID band hai' });
     if (emp.workType !== 'FIELD_WORK') {
       return res.status(403).json({ error: 'Client visit sirf Field Work wale employee ke liye hai' });
+    }
+
+    // Field work bhi sirf working hours me: shift khatam hone ke baad client check-in nahi hoga
+    const visitShift = await Shift.findOne({ id: emp.shiftId });
+    const visitEnd = visitShift && !visitShift.isOvernight ? parseClock(visitShift.endTime) : null;
+    if (visitEnd !== null && minutesNowIST() >= visitEnd) {
+      return res.status(400).json({ error: `Working hours (${visitShift.endTime} tak) khatam ho gaye. Ab client check-in nahi ho sakta.` });
     }
 
     const b = req.body || {};

@@ -19,6 +19,7 @@ import {
   ClientVisit,
   SalarySlip,
   CompanyInfo,
+  MonthlySummaryRow,
 } from '../types';
 import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
@@ -105,6 +106,8 @@ export const getAttendance = (date?: string) =>
 export const getAttendanceMonthApi = (month: string) =>
   request<AttendanceRecord[]>(`/api/attendance/monthly/${month}`);
 // Ek employee ki poori attendance history
+export const getAttendanceSummaryApi = (month: string) =>
+  request<MonthlySummaryRow[]>(`/api/attendance/summary/${month}`);
 export const getEmployeeAttendanceApi = (employeeId: string) =>
   request<AttendanceRecord[]>(`/api/attendance/${employeeId}`);
 export const updateAttendanceTodayApi = (employeeId: string, record: Partial<AttendanceRecord>) =>

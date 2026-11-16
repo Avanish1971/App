@@ -62,6 +62,13 @@ function trackOuting(record, inside, canOpen) {
   return null;
 }
 
+// Abhi shift start + grace ke baad ka time hai? (late mark ke liye)
+async function isLateNow(record, employee) {
+  const shift = await Shift.findOne({ id: record.shiftId || (employee && employee.shiftId) });
+  const start = shift && !shift.isOvernight ? parseClock(shift.startTime) : null;
+  return start !== null && minutesNowIST() > start + (shift.gracePeriodMinutes || 0);
+}
+
 // Employee office ke radius se grace time se zyada bahar raha: din band karo.
 //  - Shift ke BEECH me gaya  -> HALF DAY
 //  - Shift khatam hone ke time (ya baad) gaya -> CHECKED_OUT (din poora)
@@ -106,20 +113,29 @@ async function processPingInner(employeeId, ping) {
 
   const policy = await getPolicy();
 
-  // Admin ke Live Radar ke liye employee ki taaza location.
-  // Bahut kharab fix (100m se zyada galti) se radar me dot idhar-udhar na uchhle, isliye use save nahi karte.
-  if (!(accuracy > 100)) {
-    await Employee.updateOne({ id: employeeId }, { currentLat: lat, currentLng: lng, accuracyMeters: accuracy });
+  const office = await Office.findOne({ id: employee.officeId });
+  if (!office) {
+    if (!(accuracy > 100)) await Employee.updateOne({ id: employeeId }, { currentLat: lat, currentLng: lng, accuracyMeters: accuracy });
+    return { record: null, inside: null, reason: 'NO_OFFICE' };
   }
 
-  const office = await Office.findOne({ id: employee.officeId });
-  if (!office) return { record: null, inside: null, reason: 'NO_OFFICE' };
+  // Office Wi-Fi ka internet IP match ho to employee office me HAI (GPS se zyada pakka aur hilta nahi).
+  const ip = ping && ping.clientIp ? String(ping.clientIp) : '';
+  const ipInside = Boolean(ip && Array.isArray(office.publicIps) && office.publicIps.includes(ip));
+
+  // Admin ke Live Radar ke liye employee ki taaza location.
+  // Office Wi-Fi par ho to dot office par; kharab GPS fix (100m se zyada galti) se dot idhar-udhar na uchhle.
+  if (ipInside) {
+    await Employee.updateOne({ id: employeeId }, { currentLat: office.latitude, currentLng: office.longitude, accuracyMeters: 5 });
+  } else if (!(accuracy > 100)) {
+    await Employee.updateOne({ id: employeeId }, { currentLat: lat, currentLng: lng, accuracyMeters: accuracy });
+  }
 
   const dist = distanceMeters(lat, lng, office.latitude, office.longitude);
   // GPS ki galti (accuracy) bhi ginte hain: agar "galti ka gola" office ke radius ko chhu raha hai to employee andar maana jata hai.
   // (Office ke andar baithe GPS 20-50m idhar-udhar hota hai; sirf seedhi doori dekhne se baar-baar "bahar" ban jata tha.)
   const slack = Math.min(accuracy, policy.gpsAccuracyMaxMeters);
-  const inside = dist - slack <= office.radiusMeters;
+  const inside = ipInside || dist - slack <= office.radiusMeters;
   const date = todayIST();
 
   // Aaj ka record (nahi hai to ban jata hai)
@@ -148,27 +164,43 @@ async function processPingInner(employeeId, ping) {
   record.lastLat = lat;
   record.lastLng = lng;
   record.lastDistanceMeters = dist;
+  if (inside) record.verifiedVia = ipInside ? 'WIFI' : 'GPS';
 
   const base = { record, inside, distanceMeters: dist, officeName: office.name, restored };
 
   // GPS kamzor hai -> sirf location save, status mat badlo
-  if (accuracy > policy.gpsAccuracyMaxMeters) {
+  if (accuracy > policy.gpsAccuracyMaxMeters && !ipInside) {
     await record.save();
     return { ...base, ignored: 'LOW_ACCURACY' };
   }
+  record.outsideStreak = inside ? 0 : (record.outsideStreak || 0) + 1; // lagatar kitni baar bahar mila (ek-do jhatke ignore)
   record.insideGeofence = inside; // kamzor GPS se ye flag nahi badalta (baar-baar andar/bahar na ho)
-  // Shift khatam ho chuka aur aaj koi aaya hi nahi tha (ABSENT lag chuka): ab GPS se status nahi badlega
-  if (record.status === 'ABSENT' && !record.checkInTime) {
+  // Attendance SIRF working hours (shift) me lagti hai. Shift khatam hone ke baad pehli baar office aaye
+  // (office staff ho ya field staff) to attendance nahi lagegi: seedha ABSENT.
+  if (!record.checkInTime && (record.status === 'SCHEDULED' || record.status === 'ABSENT')) {
     const dayShift = await Shift.findOne({ id: record.shiftId || employee.shiftId });
     const dayEnd = dayShift && !dayShift.isOvernight ? parseClock(dayShift.endTime) : null;
     if (dayEnd !== null && minutesNowIST() >= dayEnd) {
+      let autoAbsent = false;
+      if (record.status === 'SCHEDULED') {
+        record.status = 'ABSENT';
+        record.isLate = false;
+        record.events.push(
+          newEvent('ABSENT_MARK', lat, lng, accuracy, `Working hours (${dayShift.endTime} tak) ke baad aaye: attendance nahi lagi -> ABSENT`)
+        );
+        autoAbsent = true;
+      }
       await record.save();
-      return { ...base, ignored: 'DAY_CLOSED' };
+      return { ...base, ignored: 'AFTER_HOURS', autoAbsent };
     }
   }
   // Bahar gaya / wapas aaya ka hisaab (field staff: office se field par jaana bhi ginte hain)
   const isFieldStaff = employee.workType === 'FIELD_WORK';
-  const returnedAfter = trackOuting(record, inside, isFieldStaff ? record.locationType === 'OFFICE' : record.status === 'PRESENT');
+  const returnedAfter = trackOuting(
+    record,
+    inside,
+    (isFieldStaff ? record.locationType === 'OFFICE' : record.status === 'PRESENT') && record.outsideStreak >= 2
+  );
   if (returnedAfter !== null && !isFieldStaff) {
     record.events.push(
       newEvent('GEOFENCE_ENTER', lat, lng, accuracy,
@@ -179,13 +211,15 @@ async function processPingInner(employeeId, ping) {
   // bahar nikalte hi ON_DUTY (field par). Office se bahar jaane par kabhi ABSENT/HALF DAY nahi lagta.
   if (employee.workType === 'FIELD_WORK') {
     const wasAt = record.locationType;
-    record.locationType = inside ? 'OFFICE' : 'FIELD';
+    if (inside) record.locationType = 'OFFICE';
+    else if (record.outsideStreak >= 2 || !wasAt) record.locationType = 'FIELD'; // ek-do jhatke se 'field par' nahi
     if (inside) {
       if (record.status === 'SCHEDULED' || record.status === 'ON_DUTY') {
         const firstTime = !record.checkInTime;
         record.status = 'PRESENT';
         record.verificationStatus = 'VERIFIED';
         if (firstTime) {
+          record.isLate = await isLateNow(record, employee); // field par nahi, office me late aaye to LATE
           record.checkInTime = nowTimeIST();
           record.checkInLat = lat;
           record.checkInLng = lng;
@@ -193,9 +227,9 @@ async function processPingInner(employeeId, ping) {
           record.source = 'AUTO_GEOFENCE';
         }
         record.events.push(newEvent('GEOFENCE_ENTER', lat, lng, accuracy, `Field staff ${office.name} me aaye: office me kaam (${dist}m door)${returnedAfter !== null ? `. ${returnedAfter} min field par the (aaj kul ${record.totalOutMinutes} min)` : ''}`));
-        if (firstTime) record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, 'Auto check-in (office): PRESENT'));
+        if (firstTime) record.events.push(newEvent('CHECK_IN', lat, lng, accuracy, record.isLate ? 'Auto check-in (office): PRESENT, LATE' : 'Auto check-in (office): PRESENT'));
       }
-    } else if (record.status === 'PRESENT' && wasAt !== 'FIELD') {
+    } else if (record.status === 'PRESENT' && record.locationType === 'FIELD' && wasAt !== 'FIELD') {
       record.status = 'ON_DUTY';
       record.events.push(newEvent('GEOFENCE_EXIT', lat, lng, accuracy, `Field staff ${office.name} se bahar gaye: field par (ON-DUTY)`));
     }
@@ -257,7 +291,7 @@ async function processPing(employeeId, ping) {
   if (result && result.record) {
     const rec = result.record;
     broadcastAdmin('attendance', {
-      reason: result.restored ? 'SIGNAL_RESTORED' : undefined,
+      reason: result.restored ? 'SIGNAL_RESTORED' : result.autoAbsent ? 'AUTO_ABSENT' : undefined,
       record: typeof rec.toObject === 'function' ? rec.toObject() : rec,
       location: {
         employeeId,
@@ -268,6 +302,19 @@ async function processPing(employeeId, ping) {
     });
   }
   return result;
+}
+
+// Phone ki location band/kharab ho tab bhi: sirf Office Wi-Fi ke IP se office me hone ka saboot.
+// IP office ka na ho to kuch nahi badalta (IP se "bahar" nahi maante, kyunki bahar ka pata nahi chalta).
+async function processWifiPing(employeeId, ip) {
+  const employee = await Employee.findOne({ id: employeeId });
+  if (!employee) throw httpError(404, 'Employee nahi mila');
+  if (employee.status === 'INACTIVE') throw httpError(403, 'Employee ID deactivate hai');
+  const office = await Office.findOne({ id: employee.officeId });
+  const ok = Boolean(ip && office && Array.isArray(office.publicIps) && office.publicIps.includes(ip));
+  if (!ok) return { verified: false, record: null };
+  const result = await processPing(employeeId, { latitude: office.latitude, longitude: office.longitude, accuracy: 0, clientIp: ip });
+  return { verified: true, record: result.record };
 }
 
 // Har minute chalta hai: jo employee radius se bahar nikle aur app band ho gaya
@@ -478,4 +525,4 @@ function startSweeper() {
   console.log('Geofence sweeper chalu (har 60 sec, har company ke liye)');
 }
 
-module.exports = { processPing, sweepExpiredExits, markNoShowsLate, markAbsentNoShows, checkSignalLost, sweepAllCompanies, startSweeper };
+module.exports = { processPing, processWifiPing, sweepExpiredExits, markNoShowsLate, markAbsentNoShows, checkSignalLost, sweepAllCompanies, startSweeper };

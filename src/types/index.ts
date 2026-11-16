@@ -395,3 +395,15 @@ export interface CompanyInfo {
   hasLogo: boolean;
   updatedAt: string;
 }
+
+// Mahine ka hisaab (server banata hai): kitne din aaya, late, half day, leave, absent
+export interface MonthlySummaryRow {
+  employeeId: string;
+  came: number;
+  late: number;
+  half: number;
+  absent: number;
+  leave: number;
+  minutes: number;
+  outMinutes: number;
+}

@@ -348,7 +348,7 @@ export function MobileAppSimulator({
 
           {attendance.status === 'ABSENT' && (
             <div className="w-full py-2.5 px-3 border text-[11px] font-medium rounded-xl text-center bg-rose-50 border-rose-200 text-rose-700">
-              Aaj aap na office aaye, na field work kiya, isliye attendance ABSENT hai. Galti ho to Regularize karo.
+              Aaj working hours me aap na office aaye, na field work kiya, isliye attendance ABSENT hai. Working hours ke baad aane par attendance nahi lagti. Galti ho to Regularize karo.
             </div>
           )}
 

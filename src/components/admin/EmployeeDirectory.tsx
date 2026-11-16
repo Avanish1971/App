@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from './Avatar';
-import { Employee, AttendanceRecord, Office, Shift } from '../../types';
+import { Employee, AttendanceRecord, MonthlySummaryRow, Office, Shift } from '../../types';
 import { DeactivateEmployeeModal } from './DeactivateEmployeeModal';
 import { DeleteEmployeeModal } from './DeleteEmployeeModal';
 import { TransferEmployeeModal } from './TransferEmployeeModal';
@@ -10,9 +10,9 @@ import { FieldVisitList } from './FieldVisitList';
 import { SalarySlipsCard } from './SalarySlipsCard';
 import { AvatarPicker } from './AvatarPicker';
 import { uploadEmployeePhotoApi } from '../../lib/api';
-import { getEmployeeAttendanceApi } from '../../lib/api';
+import { getAttendanceSummaryApi } from '../../lib/api';
 import { formatINR } from '../../utils/payroll';
-import { didCome, currentMonthIST } from './MonthlyAttendanceReport';
+import { currentMonthIST } from './MonthlyAttendanceReport';
 import {
   Search,
   UserSearch,
@@ -124,7 +124,7 @@ export function EmployeeDirectory({
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployeeId || null);
   const [showList, setShowList] = useState(false);
-  const [history, setHistory] = useState<AttendanceRecord[] | null>(null);
+  const [mrow, setMrow] = useState<MonthlySummaryRow | null | undefined>(undefined); // undefined = load ho raha
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
@@ -146,20 +146,20 @@ export function EmployeeDirectory({
 
   const employee = employees.find((e) => e.id === selectedId) || null;
 
-  // Selected employee ki attendance history (is mahine ka summary ke liye)
+  // Is mahine ka hisaab (server se: working hours ke hisaab se, approved leave samet)
   useEffect(() => {
     if (!employee) {
-      setHistory(null);
+      setMrow(undefined);
       return;
     }
     let cancelled = false;
-    setHistory(null);
-    getEmployeeAttendanceApi(employee.id)
-      .then((d) => {
-        if (!cancelled) setHistory(d);
+    setMrow(undefined);
+    getAttendanceSummaryApi(currentMonthIST())
+      .then((rows) => {
+        if (!cancelled) setMrow(rows.find((r) => r.employeeId === employee.id) || null);
       })
       .catch(() => {
-        if (!cancelled) setHistory([]);
+        if (!cancelled) setMrow(null);
       });
     return () => {
       cancelled = true;
@@ -180,17 +180,7 @@ export function EmployeeDirectory({
       .slice(0, 8);
   }, [employees, query]);
 
-  const monthStats = useMemo(() => {
-    const month = currentMonthIST();
-    const list = (history || []).filter((r) => r.date.startsWith(month));
-    return {
-      came: list.filter(didCome).length,
-      half: list.filter((r) => r.status === 'HALF_DAY').length,
-      absent: list.filter((r) => r.status === 'ABSENT').length,
-      leave: list.filter((r) => r.status === 'ON_LEAVE').length,
-      late: list.filter((r) => r.isLate).length,
-    };
-  }, [history]);
+  const monthStats = { came: mrow?.came ?? 0, late: mrow?.late ?? 0, half: mrow?.half ?? 0, leave: mrow?.leave ?? 0, absent: mrow?.absent ?? 0 };
 
   const office = employee ? offices.find((o) => o.id === employee.officeId) : undefined;
   const shift = employee ? shifts.find((s) => s.id === employee.shiftId) : undefined;
@@ -525,16 +515,16 @@ export function EmployeeDirectory({
               </Card>
 
               <Card title="Is mahine ki attendance" icon={CalendarCheck}>
-                {history === null ? (
+                {mrow === undefined ? (
                   <div className="text-xs text-slate-500">Loading…</div>
                 ) : (
                   <div className="grid grid-cols-5 gap-2 text-center">
                     {[
-                      { label: 'Aaya', value: monthStats.came, color: 'text-emerald-600' },
-                      { label: 'Half Day', value: monthStats.half, color: 'text-amber-700' },
-      { label: 'Absent', value: monthStats.absent, color: 'text-rose-600' },
-                      { label: 'Leave', value: monthStats.leave, color: 'text-purple-600' },
+                      { label: 'Din Aaya', value: monthStats.came, color: 'text-emerald-600' },
                       { label: 'Late', value: monthStats.late, color: 'text-amber-600' },
+                      { label: 'Half Day', value: monthStats.half, color: 'text-orange-600' },
+                      { label: 'Leave', value: monthStats.leave, color: 'text-purple-600' },
+                      { label: 'Absent', value: monthStats.absent, color: 'text-rose-600' },
                     ].map((s) => (
                       <div key={s.label} className="bg-slate-50 border border-slate-200 rounded-xl py-2">
                         <div className={`text-lg font-extrabold font-mono ${s.color}`}>{s.value}</div>

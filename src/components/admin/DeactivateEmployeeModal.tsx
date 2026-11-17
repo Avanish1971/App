@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { Avatar } from './Avatar';
 import { Employee } from '../../types';
@@ -10,6 +11,7 @@ interface DeactivateEmployeeModalProps {
 }
 
 export function DeactivateEmployeeModal({ employee, onConfirm, onClose }: DeactivateEmployeeModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const isCurrentlyInactive = employee.status === 'INACTIVE';
   const [reason, setReason] = useState('कंपनी छोड़ दी / इस्तीफा (Resigned / Left Company)');
   const [notes, setNotes] = useState('');

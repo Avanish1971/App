@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { WifiOff, Wifi, RefreshCw, CheckCircle2, ShieldCheck, X } from 'lucide-react';
 import { AttendanceEvent } from '../../types';
@@ -17,6 +18,7 @@ export function OfflineQueueModal({
   onSyncEvents,
   onClose,
 }: OfflineQueueModalProps) {
+  useBackClose(onClose);
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = () => {

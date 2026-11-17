@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useEffect, useState } from 'react';
 import { Avatar } from '../admin/Avatar';
 import { X, User, FileText, Download, Loader2, Briefcase, Building, Phone, Mail, CalendarDays, UserCog, BadgeCheck } from 'lucide-react';
@@ -39,6 +40,8 @@ function Row({ icon: Icon, label, value }: { icon: typeof User; label: string; v
 // Profile: 2 tab — Information aur Salary Slip (slip tabhi dikhti hai jab admin upload kare)
 export function ProfileModule({ employee, office, onClose }: ProfileModuleProps) {
   const [tab, setTab] = useState<'info' | 'slips'>('info');
+  useBackClose(onClose); // back = Profile band
+  useBackClose(() => setTab('info'), tab !== 'info'); // Salary Slip tab se back = Information tab
   const [slips, setSlips] = useState<SalarySlip[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);

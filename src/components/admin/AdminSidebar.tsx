@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import {
   Navigation,
   MapPin,
@@ -71,6 +72,7 @@ export function AdminSidebar({
   open,
   onClose,
 }: AdminSidebarProps) {
+  useBackClose(onClose, open); // phone par drawer khula ho to back = drawer band
   const content = (
     <nav className="h-full flex flex-col gap-5 p-4 overflow-y-auto">
       {/* Add New Employee */}

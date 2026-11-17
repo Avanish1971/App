@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, X, Megaphone } from 'lucide-react';
 import { InboxMessage } from '../../types';
@@ -14,6 +15,7 @@ function formatWhen(iso: string) {
 export function MessageInbox({ enabled }: { enabled: boolean }) {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [open, setOpen] = useState(false);
+  useBackClose(() => setOpen(false), open); // back = messages sheet band
   const [banner, setBanner] = useState<InboxMessage | null>(null);
   const [freshIds, setFreshIds] = useState<string[]>([]);
   const openRef = useRef(open);

@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Avatar } from './Avatar';
 import { Employee, AttendanceRecord, MonthlySummaryRow, Office, Shift } from '../../types';
@@ -123,6 +124,11 @@ export function EmployeeDirectory({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(initialEmployeeId || null);
+  // Employee ki details khuli ho to back = search list par wapas
+  useBackClose(() => {
+    setSelectedId(null);
+    setQuery('');
+  }, selectedId !== null);
   const [showList, setShowList] = useState(false);
   const [mrow, setMrow] = useState<MonthlySummaryRow | null | undefined>(undefined); // undefined = load ho raha
   const [showDeactivate, setShowDeactivate] = useState(false);

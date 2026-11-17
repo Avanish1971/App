@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
 import { PendingDocument } from '../../lib/files';
@@ -68,6 +69,7 @@ function Section({ icon: Icon, title, children }: { icon: typeof Key; title: str
 }
 
 export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, onClose }: AddEmployeeModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const { code: companyCode, empPrefix } = useCompany();
   // ---- Basic ----
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);

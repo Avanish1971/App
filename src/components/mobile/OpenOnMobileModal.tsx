@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -20,6 +21,7 @@ interface OpenOnMobileModalProps {
 }
 
 export function OpenOnMobileModal({ onClose }: OpenOnMobileModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'pwa' | 'apk'>('pwa');
 

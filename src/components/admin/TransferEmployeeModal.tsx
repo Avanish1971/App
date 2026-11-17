@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
 import { ArrowRightLeft, X, Loader2, ArrowRight } from 'lucide-react';
@@ -18,6 +19,7 @@ const inputCls =
 
 // Employee ko ek branch se doosre me bhejo: ab naye branch ke radius me attendance lagegi
 export function TransferEmployeeModal({ employee, offices, shifts, onTransfer, onClose }: TransferEmployeeModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const current = offices.find((o) => o.id === employee.officeId);
   const options = offices.filter((o) => o.id !== employee.officeId);
   const [officeId, setOfficeId] = useState(options[0]?.id || '');

@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useRef, useState } from 'react';
 import { Building2, ImagePlus, Trash2, Save, Loader2, CheckCircle2, X, Copy, Check, KeyRound } from 'lucide-react';
 import { saveCompanyApi } from '../../lib/api';
@@ -6,6 +7,7 @@ import { useCompany, setCompanyCache } from '../../lib/useCompany';
 
 // Header ke company naam/logo par click karne se khulta hai: naam/logo badlo aur Company Code dekho
 export function CompanyProfileModal({ onClose }: { onClose: () => void }) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const { name: savedName, logoUrl: savedLogo, code } = useCompany();
   const [name, setName] = useState<string | null>(null);
   const [newLogo, setNewLogo] = useState<{ base64: string; mime: string; previewUrl: string } | null>(null);

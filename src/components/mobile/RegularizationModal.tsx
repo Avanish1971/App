@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { RegularizationRequest } from '../../types';
 import { Clock, CheckCircle, X, ShieldAlert } from 'lucide-react';
@@ -8,6 +9,7 @@ interface RegularizationModalProps {
 }
 
 export function RegularizationModal({ onApplyRegularization, onClose }: RegularizationModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const [date, setDate] = useState('2026-09-26');
   const [requestedCheckIn, setRequestedCheckIn] = useState('09:45 AM');
   const [requestedCheckOut, setRequestedCheckOut] = useState('06:15 PM');

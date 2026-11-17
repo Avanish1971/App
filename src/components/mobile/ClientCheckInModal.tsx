@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -108,6 +109,7 @@ function PhotoBox({
 
 // Field work wale employee ka client visit: live location + selfie + jagah ki photo + wajah + client info
 export function ClientCheckInModal({ onSaved, onClose }: ClientCheckInModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const [clientName, setClientName] = useState('');
   const [clientLocation, setClientLocation] = useState('');
   const [contactPerson, setContactPerson] = useState('');

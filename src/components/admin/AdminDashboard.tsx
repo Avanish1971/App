@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { pushLayer, resetLayers, useBackClose } from '../../lib/backStack';
 import { Avatar } from './Avatar';
 import {
   Office,
@@ -120,6 +121,16 @@ export function AdminDashboard({
     record?: AttendanceRecord;
   } | null>(null);
 
+  // Back button: tab badalna ek "kadam" hai. Back dabane par pichhli tab par wapas (portal band nahi hota).
+  const goTab = (tab: AdminTab) => {
+    if (tab === activeTab) return;
+    const prev = activeTab;
+    setActiveTab(tab);
+    pushLayer(() => setActiveTab(prev));
+  };
+  useBackClose(() => setInspectAuditEmployee(null), inspectAuditEmployee !== null);
+  useEffect(() => () => resetLayers(), []);
+
   // Metrics — sab live data (employees/attendanceRecords/offices) se calculate hote hain
   const totalEmployees = employees.filter((e) => e.status === 'ACTIVE').length;
   const presentToday = attendanceRecords.filter(
@@ -141,7 +152,7 @@ export function AdminDashboard({
       activeTab={activeTab}
       onChange={(tab) => {
         if (tab === 'employees') setDirectoryEmployeeId(null);
-        setActiveTab(tab);
+        goTab(tab);
       }}
       onAddEmployee={() => setShowAddEmployeeModal(true)}
       pendingApprovalsCount={pendingApprovalsCount}
@@ -239,7 +250,7 @@ export function AdminDashboard({
             offices={offices}
             onOpenEmployee={(id) => {
               setDirectoryEmployeeId(id);
-              setActiveTab('employees');
+              goTab('employees');
             }}
           />
         )}

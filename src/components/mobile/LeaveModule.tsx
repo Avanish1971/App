@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { LeaveRequest, LeaveBalance, LeaveKind } from '../../types';
 import { Calendar, Plus, CheckCircle, Clock, X, AlertCircle } from 'lucide-react';
@@ -23,6 +24,8 @@ const KINDS = Object.keys(KIND_INFO) as LeaveKind[];
 
 export function LeaveModule({ leaves, leaveBalance, employeeId, employeeName, onApplyLeave, onClose }: LeaveModuleProps) {
   const [activeTab, setActiveTab] = useState<'balance' | 'apply' | 'history'>('balance');
+  useBackClose(onClose); // back = Leaves screen band
+  useBackClose(() => setActiveTab('balance'), activeTab !== 'balance'); // Apply/History tab se back = Balance tab
   const [leaveType, setLeaveType] = useState<LeaveKind>('CASUAL');
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());

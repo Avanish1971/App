@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { Avatar } from './Avatar';
 import { Employee } from '../../types';
@@ -10,6 +11,7 @@ interface DeleteEmployeeModalProps {
 }
 
 export function DeleteEmployeeModal({ employee, onConfirm, onClose }: DeleteEmployeeModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

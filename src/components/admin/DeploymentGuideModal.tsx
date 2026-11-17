@@ -1,3 +1,4 @@
+import { useBackClose } from '../../lib/backStack';
 import { X, Globe, Shield, Smartphone, Key, Monitor, CheckCircle2, Copy, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 
@@ -6,6 +7,7 @@ interface DeploymentGuideModalProps {
 }
 
 export function DeploymentGuideModal({ onClose }: DeploymentGuideModalProps) {
+  useBackClose(onClose); // back dabane par ye popup band ho (app/portal nahi)
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCreds, setCopiedCreds] = useState(false);
 

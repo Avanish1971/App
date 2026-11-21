@@ -5,9 +5,9 @@ import { LogOut } from 'lucide-react';
 const mins = (m: number) => (m < 1 ? '1 min se kam' : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`);
 
 export const openOuting = (r?: AttendanceRecord | null): Outing | null => {
-  const list = r?.outings || [];
+  const list = Array.isArray(r?.outings) ? r!.outings! : [];
   const last = list.length ? list[list.length - 1] : null;
-  return last && !last.returnedAt ? last : null;
+  return last && typeof last === 'object' && !last.returnedAt ? last : null;
 };
 
 // Roster me chhota tag: "ABHI BAHAR: 12 min se" ya "BAHAR GAYA: 25 min (2 baar)"
@@ -18,7 +18,7 @@ export function OutingBadge({ record }: { record?: AttendanceRecord | null }) {
     return () => clearInterval(t);
   }, []);
 
-  const outings = record?.outings || [];
+  const outings = (Array.isArray(record?.outings) ? record!.outings! : []).filter((o) => o && typeof o === 'object');
   if (outings.length === 0) return null;
   const open = openOuting(record);
   const done = outings.filter((o) => o.returnedAt);
@@ -44,7 +44,7 @@ export function OutingBadge({ record }: { record?: AttendanceRecord | null }) {
 
 // Poori list: har baar kab gaya, kab aaya, kitni der
 export function OutingList({ record }: { record?: AttendanceRecord | null }) {
-  const outings = record?.outings || [];
+  const outings = (Array.isArray(record?.outings) ? record!.outings! : []).filter((o) => o && typeof o === 'object');
   if (outings.length === 0) return <div className="text-[11px] text-slate-500">Aaj office se bahar nahi gaya</div>;
   return (
     <div className="space-y-1">
@@ -53,10 +53,10 @@ export function OutingList({ record }: { record?: AttendanceRecord | null }) {
           <span className="text-slate-700">
             <strong>{i + 1}.</strong> {o.leftTime} → {o.returnedTime || <span className="text-amber-700 font-semibold">abhi bahar</span>}
           </span>
-          <span className="font-mono font-bold text-slate-900">{o.minutes !== undefined ? mins(o.minutes) : ''}</span>
+          <span className="font-mono font-bold text-slate-900">{typeof o.minutes === 'number' ? mins(o.minutes) : ''}</span>
         </div>
       ))}
-      <div className="text-[11px] text-slate-500 text-right">Kul bahar: <strong>{mins(record?.totalOutMinutes || 0)}</strong></div>
+      <div className="text-[11px] text-slate-500 text-right">Kul bahar: <strong>{mins(Number(record?.totalOutMinutes) || 0)}</strong></div>
     </div>
   );
 }

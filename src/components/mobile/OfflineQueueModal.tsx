@@ -102,7 +102,9 @@ export function OfflineQueueModal({
                       <span className="text-[10px] text-slate-400 font-mono">{ev.timestamp}</span>
                     </div>
                     <div className="text-[10px] text-slate-400">
-                      Coords: {ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)} (±{ev.accuracy}m)
+                      {typeof ev.latitude === 'number' && typeof ev.longitude === 'number'
+                        ? `Coords: ${ev.latitude.toFixed(4)}, ${ev.longitude.toFixed(4)} (±${ev.accuracy}m)`
+                        : 'Location nahi'}
                     </div>
                     {ev.note && <div className="text-[11px] text-slate-300">{ev.note}</div>}
                   </div>

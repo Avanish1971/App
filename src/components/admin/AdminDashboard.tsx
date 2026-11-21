@@ -29,6 +29,7 @@ import { MessageCenter } from './MessageCenter';
 import { FieldVisitsPanel } from './FieldVisitsPanel';
 import { KpiCards } from './KpiCards';
 import { OutingList } from './OutingBadge';
+import { EventTrail } from './EventTrail';
 import type { PendingDocument } from '../../lib/files';
 import type { PickedPhoto } from './AvatarPicker';
 import {
@@ -396,22 +397,7 @@ export function AdminDashboard({
                 Geofence & Event Telemetry Trail
               </div>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 max-h-60 overflow-y-auto">
-                {inspectAuditEmployee.record?.events.length === 0 ? (
-                  <div className="text-center py-4 text-slate-500">No events logged for this record</div>
-                ) : (
-                  inspectAuditEmployee.record?.events.map((ev, i) => (
-                    <div key={ev.id || i} className="border-b border-slate-100 pb-1.5 last:border-0">
-                      <div className="flex justify-between font-mono text-slate-700">
-                        <span className="font-bold text-indigo-600">{ev.eventType}</span>
-                        <span className="text-[10px] text-slate-500">{ev.timestamp}</span>
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{ev.note}</div>
-                      <div className="text-[9px] text-slate-500 font-mono">
-                        Coords: {ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)} (±{ev.accuracy}m)
-                      </div>
-                    </div>
-                  ))
-                )}
+                <EventTrail events={inspectAuditEmployee.record?.events} />
               </div>
             </div>
 

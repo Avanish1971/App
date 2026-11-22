@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Employee, MonthlySummaryRow, Office } from '../../types';
-import { getAttendanceRangeSummaryApi } from '../../lib/api';
+import { getAttendanceRangeSummaryApi, getAttendanceSummaryApi } from '../../lib/api';
 import { useLiveEvents } from '../../lib/realtime';
 import { Avatar } from './Avatar';
 import { Search, CalendarDays, ChevronRight, X } from 'lucide-react';
@@ -30,6 +30,8 @@ function monthRange(m: string) {
 
 const fmtDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
+const hasActivity = (rows: MonthlySummaryRow[]) => rows.some((r) => r.came || r.late || r.half || r.absent || r.leave || r.minutes);
+
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const fmtHours = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 
@@ -44,6 +46,8 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // Chuni hui range me data na ho to us mahine ki attendance dikhate hain (kaun sa mahina, yahan)
+  const [fallbackMonth, setFallbackMonth] = useState<string | null>(null);
   const rangeValid = Boolean(from && to && from <= to);
   const rangeKey = `${from}_${to}`;
   const rangeRef = useRef(rangeKey);
@@ -62,19 +66,33 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
     }
     if (!quiet) setLoading(true);
     setError(null);
-    getAttendanceRangeSummaryApi(f, t)
-      .then((d) => {
-        if (rangeRef.current === key) setSummary(d);
-      })
-      .catch((err) => {
+    (async () => {
+      try {
+        let d = await getAttendanceRangeSummaryApi(f, t);
+        let fb: string | null = null;
+        if (!hasActivity(d)) {
+          // Is range me kuch nahi -> us mahine (From date wale) ki attendance dikhao
+          const m = f.slice(0, 7);
+          const md = await getAttendanceSummaryApi(m);
+          if (hasActivity(md)) {
+            d = md;
+            fb = m;
+          }
+        }
+        if (rangeRef.current === key) {
+          setSummary(d);
+          setFallbackMonth(fb);
+        }
+      } catch (err) {
         if (rangeRef.current === key) {
           setSummary([]);
+          setFallbackMonth(null);
           setError(err instanceof Error ? err.message : 'Data load nahi ho paaya');
         }
-      })
-      .finally(() => {
+      } finally {
         if (rangeRef.current === key) setLoading(false);
-      });
+      }
+    })();
   };
 
   useEffect(() => {
@@ -129,7 +147,8 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
   }, [employees, summary, search]);
 
   // Chuni hui date range me kisi bhi employee ka koi attendance/leave record nahi hai
-  const noActivity = !summary.some((r) => r.came || r.late || r.half || r.absent || r.leave || r.minutes);
+  const noActivity = !hasActivity(summary);
+  const fallbackLabel = fallbackMonth ? new Date(`${fallbackMonth}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '';
 
   const rangeLabel = rangeValid ? (from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`) : '';
 
@@ -196,6 +215,15 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         />
       </div>
 
+      {fallbackMonth && (
+        <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+          Chuni hui date range me attendance nahi mili, isliye {fallbackLabel} ki attendance dikha rahe hain.
+        </div>
+      )}
+      {!loading && !error && !fallbackMonth && noActivity && rows.length > 0 && (
+        <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">Is date range me kisi ki attendance nahi mili.</div>
+      )}
+
       {error && <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3">{error}</div>}
 
       <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -220,11 +248,10 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
                   Loading…
                 </td>
               </tr>
-            ) : rows.length === 0 || (noActivity && !error) ? (
+            ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-8 text-center text-slate-500 font-semibold">
                   No employee found
-                  {noActivity && rows.length > 0 && <span className="block text-[10px] font-normal text-slate-400 mt-1">Is date range me kisi ki attendance nahi mili.</span>}
                 </td>
               </tr>
             ) : (

@@ -39,27 +39,33 @@ const fmtHours = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStar
 // (sab server se, working hours ke hisaab se)
 export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: MonthlyAttendanceReportProps) {
   const [month, setMonth] = useState(currentMonthIST());
-  // Date filter: from date -> to date (default: chalu mahina, aaj tak)
-  const [from, setFrom] = useState(() => monthRange(currentMonthIST()).from);
-  const [to, setTo] = useState(() => monthRange(currentMonthIST()).to);
+  // Date filter: from date -> to date (default: khali; khali ho to upar wala month dikhta hai)
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [summary, setSummary] = useState<MonthlySummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   // Chuni hui range me data na ho to us mahine ki attendance dikhate hain (kaun sa mahina, yahan)
   const [fallbackMonth, setFallbackMonth] = useState<string | null>(null);
-  const rangeValid = Boolean(from && to && from <= to);
-  const rangeKey = `${from}_${to}`;
+  // Koi date chuni gayi hai ya nahi
+  const dateMode = Boolean(from || to);
+  // Asli range jo server se maangi jaati hai
+  const monthR = monthRange(month || currentMonthIST());
+  const effFrom = from || (to ? `${to.slice(0, 7)}-01` : monthR.from);
+  const effTo = to || (from ? todayIST() : monthR.to);
+  const rangeKey = `${effFrom}_${effTo}_${dateMode}`;
   const rangeRef = useRef(rangeKey);
   rangeRef.current = rangeKey;
-  const rangeRefValues = useRef({ from, to });
-  rangeRefValues.current = { from, to };
+  const rangeRefValues = useRef({ effFrom, effTo, dateMode });
+  rangeRefValues.current = { effFrom, effTo, dateMode };
 
-  const load = (f: string, t: string, quiet = false) => {
+  const load = (f: string, t: string, dm: boolean, quiet = false) => {
     if (!f || !t) return;
-    const key = `${f}_${t}`;
+    const key = `${f}_${t}_${dm}`;
     if (f > t) {
       setSummary([]);
+      setFallbackMonth(null);
       setLoading(false);
       setError('From date, To date se baad ki nahi ho sakti');
       return;
@@ -70,8 +76,8 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
       try {
         let d = await getAttendanceRangeSummaryApi(f, t);
         let fb: string | null = null;
-        if (!hasActivity(d)) {
-          // Is range me kuch nahi -> us mahine (From date wale) ki attendance dikhao
+        // Fallback sirf tab jab user ne khud date chuni ho aur us range me kuch na mile
+        if (dm && !hasActivity(d)) {
           const m = f.slice(0, 7);
           const md = await getAttendanceSummaryApi(m);
           if (hasActivity(md)) {
@@ -96,21 +102,18 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
   };
 
   useEffect(() => {
-    load(from, to);
-  }, [from, to]);
+    load(effFrom, effTo, dateMode);
+  }, [effFrom, effTo, dateMode]);
 
-  // Mahina badalne par from/to us mahine ke ho jaate hain
+  // Month badalne par date filter khali ho jaata hai (pure mahine ka hisaab)
   const onMonthChange = (m: string) => {
     setMonth(m);
-    if (!m) return;
-    const r = monthRange(m);
-    setFrom(r.from);
-    setTo(r.to);
+    setFrom('');
+    setTo('');
   };
 
   const onFromChange = (v: string) => {
     setFrom(v);
-    if (v) setMonth(v.slice(0, 7));
     if (v && to && v > to) setTo(v); // from, to se aage ho gayi to to ko bhi saath le lo
   };
 
@@ -119,22 +122,36 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
     if (v && from && v < from) setFrom(v);
   };
 
-  const resetRange = () => onMonthChange(currentMonthIST());
+  // Reset: date filter pura khali, chalu mahine ka hisaab
+  const resetRange = () => {
+    setFrom('');
+    setTo('');
+    setMonth(currentMonthIST());
+  };
 
   // Chalu mahine me koi aaya / late hua to hisaab turant naya ho
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useLiveEvents('admin', true, (event) => {
     // Range me aaj ki date shamil ho tabhi live refresh
-    if ((event === 'attendance' || event === 'reconnected') && rangeRefValues.current.to >= todayIST()) {
+    if ((event === 'attendance' || event === 'reconnected') && rangeRefValues.current.effTo >= todayIST()) {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => load(rangeRefValues.current.from, rangeRefValues.current.to, true), 1500);
+      timer.current = setTimeout(() => {
+        const r = rangeRefValues.current;
+        load(r.effFrom, r.effTo, r.dateMode, true);
+      }, 1500);
     }
   });
 
   const rows = useMemo(() => {
     const byEmp = new Map(summary.map((r) => [r.employeeId, r]));
     const q = search.trim().toLowerCase();
+    // Jo employee is range ke baad join hua (ya us mahine ke baad), usko nahi dikhana
+    const rangeEnd = fallbackMonth ? `${fallbackMonth}-31` : effTo;
     return employees
+      .filter((emp) => {
+        const j = (emp.joiningDate || '').slice(0, 10);
+        return !/^\d{4}-\d{2}-\d{2}$/.test(j) || j <= rangeEnd;
+      })
       .map((emp) => ({
         emp,
         s: byEmp.get(emp.id) || { employeeId: emp.id, came: 0, late: 0, half: 0, absent: 0, leave: 0, minutes: 0, outMinutes: 0 },
@@ -144,13 +161,19 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
           !q || emp.fullName.toLowerCase().includes(q) || emp.empId.toLowerCase().includes(q) || emp.department.toLowerCase().includes(q)
       )
       .sort((a, b) => b.s.came - a.s.came || a.emp.fullName.localeCompare(b.emp.fullName));
-  }, [employees, summary, search]);
+  }, [employees, summary, search, effTo, fallbackMonth]);
 
   // Chuni hui date range me kisi bhi employee ka koi attendance/leave record nahi hai
   const noActivity = !hasActivity(summary);
   const fallbackLabel = fallbackMonth ? new Date(`${fallbackMonth}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '';
 
-  const rangeLabel = rangeValid ? (from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`) : '';
+  const rangeLabel = dateMode
+    ? effFrom === effTo
+      ? fmtDate(effFrom)
+      : `${fmtDate(effFrom)} – ${fmtDate(effTo)}`
+    : month
+      ? new Date(`${month}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+      : '';
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xl space-y-4 p-5">
@@ -158,7 +181,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         <div>
           <h3 className="font-bold text-slate-900 text-base">Monthly Attendance (महीने की उपस्थिति)</h3>
           <p className="text-xs text-slate-500">
-            {rangeLabel || 'Is range'}: kaun kitne din aaya, kitni baar late, half day, leave aur absent. Attendance sirf working hours me lagti hai.
+            {rangeLabel || 'Is mahine'}: kaun kitne din aaya, kitni baar late, half day, leave aur absent. Attendance sirf working hours me lagti hai.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -215,12 +238,12 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         />
       </div>
 
-      {fallbackMonth && (
+      {dateMode && fallbackMonth && (
         <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl p-3">
           Chuni hui date range me attendance nahi mili, isliye {fallbackLabel} ki attendance dikha rahe hain.
         </div>
       )}
-      {!loading && !error && !fallbackMonth && noActivity && rows.length > 0 && (
+      {dateMode && !loading && !error && !fallbackMonth && noActivity && rows.length > 0 && (
         <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">Is date range me kisi ki attendance nahi mili.</div>
       )}
 
@@ -299,7 +322,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         </table>
       </div>
       <div className="text-[10px] text-slate-400">
-        Upar ke From date se To date tak ka hisaab dikh raha hai. Din Aaya me half day wale din bhi ginte hain. Late = shift start + grace ke baad aaye. On Leave = approved leave ke din (weekly off chhod kar).
+        Din Aaya me half day wale din bhi ginte hain. Late = shift start + grace ke baad aaye. On Leave = approved leave ke din (weekly off chhod kar).
       </div>
     </div>
   );

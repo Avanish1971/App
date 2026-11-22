@@ -48,6 +48,7 @@ import {
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminLoginGate } from './components/admin/AdminLoginGate';
 import { UpdateBanner } from './components/UpdateBanner.tsx';
+import { AdminLoadingScreen } from './components/admin/AdminLoadingScreen';
 import { ShieldCheck, Radio } from 'lucide-react';
 
 // Admin website: pehle login page, login ke baad hi portal
@@ -68,6 +69,8 @@ export default function AdminApp() {
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState(0); // 0-100: kitne API call poore hue
+  const [loadReady, setLoadReady] = useState(false); // saara data aa gaya (loading screen ki bar poori hone par panel khulta hai)
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Logout / token expire par purana data screen se hata do
@@ -108,6 +111,17 @@ export default function AdminApp() {
     async function loadAll() {
       try {
         setIsLoading(true);
+        setLoadProgress(0);
+        setLoadReady(false);
+        // Har API call poora hone par progress bar aage badhe
+        const TOTAL_CALLS = 9;
+        let doneCalls = 0;
+        const track = <T,>(p: Promise<T>): Promise<T> =>
+          p.then((v) => {
+            doneCalls += 1;
+            setLoadProgress(Math.round((doneCalls / TOTAL_CALLS) * 100));
+            return v;
+          });
         const [
           officesData,
           shiftsData,
@@ -119,15 +133,15 @@ export default function AdminApp() {
           auditLogsData,
           policyData,
         ] = await Promise.all([
-          getOffices(),
-          getShifts(),
-          getEmployees(),
-          getAttendance(),
-          getLeaves(),
-          getRegularizations(),
-          getExpenses(),
-          getAuditLogs(),
-          getPolicy(),
+          track(getOffices()),
+          track(getShifts()),
+          track(getEmployees()),
+          track(getAttendance()),
+          track(getLeaves()),
+          track(getRegularizations()),
+          track(getExpenses()),
+          track(getAuditLogs()),
+          track(getPolicy()),
         ]);
 
         setOffices(officesData);
@@ -141,13 +155,15 @@ export default function AdminApp() {
         setPolicy(policyData);
         setPayrollRun(buildPayrollRun(employeesData));
         setLoadError(null);
+        // Loading screen ki bar 100% hote hi (onFinished) portal khulega
+        setLoadProgress(100);
+        setLoadReady(true);
       } catch (err) {
         console.error('Failed to load data from backend:', err);
         setLoadError(
           err instanceof Error ? err.message : 'Could not reach the backend. Is the server running?'
         );
-      } finally {
-        setIsLoading(false);
+        setIsLoading(false); // error page turant dikhao
       }
     }
 
@@ -420,11 +436,7 @@ export default function AdminApp() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center">
-        <div className="text-sm text-slate-500">Loading data from server…</div>
-      </div>
-    );
+    return <AdminLoadingScreen progress={loadProgress} ready={loadReady} onFinished={() => setIsLoading(false)} />;
   }
 
   if (loadError) {

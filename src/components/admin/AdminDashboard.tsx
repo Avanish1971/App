@@ -24,6 +24,7 @@ import { AuditLogViewer } from './AuditLogViewer';
 import { AddEmployeeModal } from './AddEmployeeModal';
 import { AdminSidebar, AdminTab } from './AdminSidebar';
 import { MonthlyAttendanceReport } from './MonthlyAttendanceReport';
+import { SalarySlipGenerator } from './SalarySlipGenerator';
 import { EmployeeDirectory } from './EmployeeDirectory';
 import { MessageCenter } from './MessageCenter';
 import { FieldVisitsPanel } from './FieldVisitsPanel';
@@ -270,6 +271,8 @@ export function AdminDashboard({
             onEmployeeUpdated={onEmployeeUpdated}
           />
         )}
+
+        {activeTab === 'salaryslip' && <SalarySlipGenerator employees={employees} />}
 
         {activeTab === 'messages' && <MessageCenter employees={employees} />}
 

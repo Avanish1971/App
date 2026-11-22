@@ -26,18 +26,25 @@ router.post('/', async (req, res) => {
     const emp = await Employee.findOne({ id: req.params.id });
     if (!emp) return res.status(404).json({ error: 'Employee nahi mila' });
 
-    const { month, fileName, mimeType, dataBase64 } = req.body || {};
+    const { month, fileName, mimeType, dataBase64, details } = req.body || {};
     if (!MONTH_RE.test(String(month || ''))) return res.status(400).json({ error: 'Mahina chuno' });
     if (!ALLOWED_MIME.includes(mimeType)) return res.status(400).json({ error: 'Sirf PDF, JPG ya PNG file allowed hai' });
     const buf = Buffer.from(String(dataBase64 || '').replace(/^data:[^;]+;base64,/, ''), 'base64');
     if (buf.length === 0) return res.status(400).json({ error: 'File khali hai' });
     if (buf.length > MAX_BYTES) return res.status(400).json({ error: 'File 3 MB se badi hai' });
 
+    // Generator se aayi slip: form ki detail bhi save hoti hai (history me dekhne / edit karne ke liye)
+    const isGenerated = details && typeof details === 'object' && !Array.isArray(details);
+    if (isGenerated && JSON.stringify(details).length > 50000) return res.status(400).json({ error: 'Slip ki detail bahut badi hai' });
+
     const existed = await SalarySlip.findOne({ employeeId: emp.id, month }, 'id');
     const doc = await SalarySlip.findOneAndUpdate(
       { employeeId: emp.id, month },
       {
-        $set: { fileName: String(fileName || 'salary-slip').slice(0, 200), mimeType, size: buf.length, data: buf, uploadedAt: new Date().toISOString() },
+        $set: {
+          fileName: String(fileName || 'salary-slip').slice(0, 200), mimeType, size: buf.length, data: buf, uploadedAt: new Date().toISOString(),
+          generated: Boolean(isGenerated), details: isGenerated ? details : null,
+        },
         $setOnInsert: { id: `slip_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` },
       },
       { upsert: true, new: true }

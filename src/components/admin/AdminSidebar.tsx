@@ -11,6 +11,7 @@ import {
   UserSearch,
   MessageSquare,
   Route,
+  Receipt,
   X,
 } from 'lucide-react';
 
@@ -19,6 +20,7 @@ export type AdminTab =
   | 'locations'
   | 'roster'
   | 'monthly'
+  | 'salaryslip'
   | 'employees'
   | 'messages'
   | 'visits'
@@ -42,6 +44,7 @@ const NAV_GROUPS: { title: string; items: { id: AdminTab; label: string; icon: t
     items: [
       { id: 'employees', label: 'Employee Details', icon: UserSearch },
       { id: 'monthly', label: 'Monthly Attendance', icon: CalendarDays },
+      { id: 'salaryslip', label: 'Salary Slip', icon: Receipt },
       { id: 'messages', label: 'Messages', icon: MessageSquare },
       { id: 'roster', label: 'Daily Attendance Roster', icon: Users },
     ],

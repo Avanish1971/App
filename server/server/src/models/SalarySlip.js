@@ -10,6 +10,9 @@ const SalarySlipSchema = new mongoose.Schema({
   size: Number,
   data: { type: Buffer, required: true },
   uploadedAt: String,
+  // Salary Slip Generator se bani slip: form ki poori detail (baad me edit karne ke liye) + generate hone ka waqt
+  generated: { type: Boolean, default: false },
+  details: { type: mongoose.Schema.Types.Mixed },
 }, { timestamps: true, versionKey: false });
 
 // Ek employee ki ek mahine ki ek hi slip (dobara upload = replace)

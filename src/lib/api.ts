@@ -18,6 +18,7 @@ import {
   LeaveBalance,
   ClientVisit,
   SalarySlip,
+  SlipDetails,
   CompanyInfo,
   MonthlySummaryRow,
 } from '../types';
@@ -334,9 +335,12 @@ export const getEmployeeSalarySlipsApi = (employeeId: string) =>
   request<SalarySlip[]>(`/api/employees/${employeeId}/salary-slips`);
 export const uploadSalarySlipApi = (
   employeeId: string,
-  slip: { month: string; fileName: string; mimeType: string; dataBase64: string }
+  slip: { month: string; fileName: string; mimeType: string; dataBase64: string; details?: SlipDetails }
 ) =>
   request<SalarySlip>(`/api/employees/${employeeId}/salary-slips`, { method: 'POST', body: JSON.stringify(slip) });
+// Saare employees ki slips (history tab). month dene par sirf us mahine ki
+export const getAllSalarySlipsApi = (month?: string) =>
+  request<SalarySlip[]>(`/api/salary-slips${month ? `?month=${month}` : ''}`);
 export const deleteSalarySlipApi = (employeeId: string, slipId: string) =>
   request<{ ok: boolean }>(`/api/employees/${employeeId}/salary-slips/${slipId}`, { method: 'DELETE' });
 // Employee (sirf apni)

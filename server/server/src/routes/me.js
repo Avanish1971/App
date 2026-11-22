@@ -165,7 +165,7 @@ router.post('/client-visits', async (req, res) => {
 // GET /api/me/salary-slips -> sirf meri (admin ki upload ki hui) salary slips
 router.get('/salary-slips', async (req, res) => {
   try {
-    const list = await SalarySlip.find({ employeeId: req.auth.employeeId }, '-data').sort({ month: -1 }).lean();
+    const list = await SalarySlip.find({ employeeId: req.auth.employeeId }, '-data -details').sort({ month: -1 }).lean();
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });

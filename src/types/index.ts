@@ -377,6 +377,30 @@ export interface InboxMessage {
 }
 
 // ---- Salary slip (admin upload karta hai) ----
+// Salary Slip Generator: ek line (earning ya deduction)
+export interface SlipLine {
+  label: string;
+  amount: number;
+}
+
+// Salary Slip Generator: form ki poori detail (baad me edit karne ke liye save hoti hai)
+export interface SlipDetails {
+  headerName: string; // PDF ke upar bada naam (company / branch)
+  employeeNo: string;
+  accountCode: string;
+  employeeName: string;
+  designation: string;
+  branchName: string;
+  payslipDate: string; // YYYY-MM-DD
+  pfAccount: string;
+  absentDays: number;
+  earnings: SlipLine[];
+  deductions: SlipLine[];
+  totalEarning: number;
+  totalDeduction: number;
+  netSalary: number;
+}
+
 export interface SalarySlip {
   id: string;
   employeeId: string;
@@ -385,6 +409,8 @@ export interface SalarySlip {
   mimeType: string;
   size: number;
   uploadedAt: string;
+  generated?: boolean; // true = Salary Slip Generator se bani
+  details?: SlipDetails | null;
 }
 
 // ---- Company naam + logo ----

@@ -108,6 +108,9 @@ export const getAttendanceMonthApi = (month: string) =>
 // Ek employee ki poori attendance history
 export const getAttendanceSummaryApi = (month: string) =>
   request<MonthlySummaryRow[]>(`/api/attendance/summary/${month}`);
+// Date range (from..to, dono shamil) ka hisaab
+export const getAttendanceRangeSummaryApi = (from: string, to: string) =>
+  request<MonthlySummaryRow[]>(`/api/attendance/summary-range?from=${from}&to=${to}`);
 export const getEmployeeAttendanceApi = (employeeId: string) =>
   request<AttendanceRecord[]>(`/api/attendance/${employeeId}`);
 export const updateAttendanceTodayApi = (employeeId: string, record: Partial<AttendanceRecord>) =>

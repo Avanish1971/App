@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Employee, MonthlySummaryRow, Office } from '../../types';
-import { getAttendanceSummaryApi } from '../../lib/api';
+import { getAttendanceRangeSummaryApi } from '../../lib/api';
 import { useLiveEvents } from '../../lib/realtime';
 import { Avatar } from './Avatar';
-import { Search, CalendarDays, ChevronRight } from 'lucide-react';
+import { Search, CalendarDays, ChevronRight, X } from 'lucide-react';
 
 interface MonthlyAttendanceReportProps {
   employees: Employee[];
@@ -15,6 +15,21 @@ export function currentMonthIST() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Kolkata' }).slice(0, 7);
 }
 
+export function todayIST() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Kolkata' });
+}
+
+// 'YYYY-MM' -> us mahine ki pehli aur aakhri date (aakhri date aaj se aage nahi jaati)
+function monthRange(m: string) {
+  const [y, mo] = m.split('-').map(Number);
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  const end = `${m}-${String(last).padStart(2, '0')}`;
+  const today = todayIST();
+  return { from: `${m}-01`, to: end > today ? today : end };
+}
+
+const fmtDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
 const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const fmtHours = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 
@@ -22,42 +37,79 @@ const fmtHours = (m: number) => `${Math.floor(m / 60)}h ${String(m % 60).padStar
 // (sab server se, working hours ke hisaab se)
 export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: MonthlyAttendanceReportProps) {
   const [month, setMonth] = useState(currentMonthIST());
+  // Date filter: from date -> to date (default: chalu mahina, aaj tak)
+  const [from, setFrom] = useState(() => monthRange(currentMonthIST()).from);
+  const [to, setTo] = useState(() => monthRange(currentMonthIST()).to);
   const [summary, setSummary] = useState<MonthlySummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const monthRef = useRef(month);
-  monthRef.current = month;
+  const rangeValid = Boolean(from && to && from <= to);
+  const rangeKey = `${from}_${to}`;
+  const rangeRef = useRef(rangeKey);
+  rangeRef.current = rangeKey;
+  const rangeRefValues = useRef({ from, to });
+  rangeRefValues.current = { from, to };
 
-  const load = (m: string, quiet = false) => {
-    if (!m) return;
+  const load = (f: string, t: string, quiet = false) => {
+    if (!f || !t) return;
+    const key = `${f}_${t}`;
+    if (f > t) {
+      setSummary([]);
+      setLoading(false);
+      setError('From date, To date se baad ki nahi ho sakti');
+      return;
+    }
     if (!quiet) setLoading(true);
     setError(null);
-    getAttendanceSummaryApi(m)
+    getAttendanceRangeSummaryApi(f, t)
       .then((d) => {
-        if (monthRef.current === m) setSummary(d);
+        if (rangeRef.current === key) setSummary(d);
       })
       .catch((err) => {
-        if (monthRef.current === m) {
+        if (rangeRef.current === key) {
           setSummary([]);
           setError(err instanceof Error ? err.message : 'Data load nahi ho paaya');
         }
       })
       .finally(() => {
-        if (monthRef.current === m) setLoading(false);
+        if (rangeRef.current === key) setLoading(false);
       });
   };
 
   useEffect(() => {
-    load(month);
-  }, [month]);
+    load(from, to);
+  }, [from, to]);
+
+  // Mahina badalne par from/to us mahine ke ho jaate hain
+  const onMonthChange = (m: string) => {
+    setMonth(m);
+    if (!m) return;
+    const r = monthRange(m);
+    setFrom(r.from);
+    setTo(r.to);
+  };
+
+  const onFromChange = (v: string) => {
+    setFrom(v);
+    if (v) setMonth(v.slice(0, 7));
+    if (v && to && v > to) setTo(v); // from, to se aage ho gayi to to ko bhi saath le lo
+  };
+
+  const onToChange = (v: string) => {
+    setTo(v);
+    if (v && from && v < from) setFrom(v);
+  };
+
+  const resetRange = () => onMonthChange(currentMonthIST());
 
   // Chalu mahine me koi aaya / late hua to hisaab turant naya ho
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useLiveEvents('admin', true, (event) => {
-    if ((event === 'attendance' || event === 'reconnected') && monthRef.current === currentMonthIST()) {
+    // Range me aaj ki date shamil ho tabhi live refresh
+    if ((event === 'attendance' || event === 'reconnected') && rangeRefValues.current.to >= todayIST()) {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => load(monthRef.current, true), 1500);
+      timer.current = setTimeout(() => load(rangeRefValues.current.from, rangeRefValues.current.to, true), 1500);
     }
   });
 
@@ -76,7 +128,10 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
       .sort((a, b) => b.s.came - a.s.came || a.emp.fullName.localeCompare(b.emp.fullName));
   }, [employees, summary, search]);
 
-  const monthLabel = month ? new Date(`${month}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '';
+  // Chuni hui date range me kisi bhi employee ka koi attendance/leave record nahi hai
+  const noActivity = !summary.some((r) => r.came || r.late || r.half || r.absent || r.leave || r.minutes);
+
+  const rangeLabel = rangeValid ? (from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`) : '';
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xl space-y-4 p-5">
@@ -84,18 +139,49 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         <div>
           <h3 className="font-bold text-slate-900 text-base">Monthly Attendance (महीने की उपस्थिति)</h3>
           <p className="text-xs text-slate-500">
-            {monthLabel || 'Is mahine'}: kaun kitne din aaya, kitni baar late, half day, leave aur absent. Attendance sirf working hours me lagti hai.
+            {rangeLabel || 'Is range'}: kaun kitne din aaya, kitni baar late, half day, leave aur absent. Attendance sirf working hours me lagti hai.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-indigo-600" />
-          <input
-            type="month"
-            value={month}
-            max={currentMonthIST()}
-            onChange={(e) => setMonth(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
-          />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-indigo-600" />
+            <input
+              type="month"
+              value={month}
+              max={currentMonthIST()}
+              onChange={(e) => onMonthChange(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <label className="text-[10px] font-semibold text-slate-500">
+            From date
+            <input
+              type="date"
+              value={from}
+              max={todayIST()}
+              onChange={(e) => onFromChange(e.target.value)}
+              className="mt-0.5 block bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+            />
+          </label>
+          <label className="text-[10px] font-semibold text-slate-500">
+            To date
+            <input
+              type="date"
+              value={to}
+              min={from || undefined}
+              max={todayIST()}
+              onChange={(e) => onToChange(e.target.value)}
+              className="mt-0.5 block bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={resetRange}
+            title="Chalu mahine par wapas"
+            className="flex items-center gap-1 px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            <X className="w-3.5 h-3.5" /> Reset
+          </button>
         </div>
       </div>
 
@@ -134,10 +220,11 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
                   Loading…
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : rows.length === 0 || (noActivity && !error) ? (
               <tr>
-                <td colSpan={9} className="py-8 text-center text-slate-500">
-                  Koi employee nahi mila.
+                <td colSpan={9} className="py-8 text-center text-slate-500 font-semibold">
+                  No employee found
+                  {noActivity && rows.length > 0 && <span className="block text-[10px] font-normal text-slate-400 mt-1">Is date range me kisi ki attendance nahi mili.</span>}
                 </td>
               </tr>
             ) : (
@@ -185,7 +272,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
         </table>
       </div>
       <div className="text-[10px] text-slate-400">
-        Din Aaya me half day wale din bhi ginte hain. Late = shift start + grace ke baad aaye. On Leave = approved leave ke din (weekly off chhod kar).
+        Upar ke From date se To date tak ka hisaab dikh raha hai. Din Aaya me half day wale din bhi ginte hain. Late = shift start + grace ke baad aaye. On Leave = approved leave ke din (weekly off chhod kar).
       </div>
     </div>
   );

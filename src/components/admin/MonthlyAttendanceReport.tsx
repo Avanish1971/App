@@ -55,6 +55,8 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
   const effFrom = from || (to ? `${to.slice(0, 7)}-01` : monthR.from);
   const effTo = to || (from ? todayIST() : monthR.to);
   const rangeKey = `${effFrom}_${effTo}_${dateMode}`;
+  const employeesCount = useRef(employees.length);
+  employeesCount.current = employees.length;
   const rangeRef = useRef(rangeKey);
   rangeRef.current = rangeKey;
   const rangeRefValues = useRef({ effFrom, effTo, dateMode });
@@ -74,7 +76,12 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
     setError(null);
     (async () => {
       try {
-        let d = await getAttendanceRangeSummaryApi(f, t);
+        // Date nahi chuni -> seedha mahine ka hisaab (month wala purana route), date chuni -> range route
+        let d = dm ? await getAttendanceRangeSummaryApi(f, t) : await getAttendanceSummaryApi(f.slice(0, 7));
+        // Naya server har employee ki ek row bhejta hai. Khali list aaye to server purana hai (summary-range route nahi hai)
+        if (dm && Array.isArray(d) && d.length === 0 && employeesCount.current > 0) {
+          throw new Error('Server purana hai: server/server/src/routes/attendance.js update karke backend restart karo, tab date filter chalega.');
+        }
         let fb: string | null = null;
         // Fallback sirf tab jab user ne khud date chuni ho aur us range me kuch na mile
         if (dm && !hasActivity(d)) {
@@ -107,7 +114,7 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
 
   // Month badalne par date filter khali ho jaata hai (pure mahine ka hisaab)
   const onMonthChange = (m: string) => {
-    setMonth(m);
+    setMonth(m || currentMonthIST());
     setFrom('');
     setTo('');
   };
@@ -115,11 +122,13 @@ export function MonthlyAttendanceReport({ employees, offices, onOpenEmployee }: 
   const onFromChange = (v: string) => {
     setFrom(v);
     if (v && to && v > to) setTo(v); // from, to se aage ho gayi to to ko bhi saath le lo
+    if (!v && !to) setMonth(currentMonthIST()); // dono date hata di -> chalu mahina
   };
 
   const onToChange = (v: string) => {
     setTo(v);
     if (v && from && v < from) setFrom(v);
+    if (!v && !from) setMonth(currentMonthIST()); // dono date hata di -> chalu mahina
   };
 
   // Reset: date filter pura khali, chalu mahine ka hisaab

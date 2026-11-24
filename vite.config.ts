@@ -1,11 +1,9 @@
-import { defineConfig, type Plugin } from 'vite';
+﻿import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-// Har build ka ek alag version number (build ke waqt ka time)
 const buildVersion = String(Date.now());
 
-// Build ke saath dist/version.json bana deta hai (UpdateBanner isse check karta hai)
 function versionFile(): Plugin {
   return {
     name: 'version-file',
@@ -20,11 +18,11 @@ function versionFile(): Plugin {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), tailwindcss(), versionFile()],
   define: {
     __APP_VERSION__: JSON.stringify(buildVersion),
   },
-  // Server par ye CSS settings pehle se thi, isliye rakhi hain
   css: {
     transformer: 'postcss',
     minify: 'esbuild',

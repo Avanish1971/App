@@ -1,4 +1,4 @@
-// Central place for every call to the backend (server/ folder — Express + MongoDB).
+﻿// Central place for every call to the backend (server/ folder â€” Express + MongoDB).
 // Change VITE_API_URL in your .env file if the backend runs somewhere other than localhost:5000.
 
 import {
@@ -26,13 +26,10 @@ import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
 // Backend ka address:
 //  1) .env me VITE_API_URL ho to wahi
-//  2) site laptop par (localhost) khuli ho to laptop ka backend  (http://localhost:5000)
+//  2) site laptop par (localhost) khuli ho to laptop ka backend  (https://jasmine-edition-panning.ngrok-free.dev)
 //  3) baaki sab jagah (AWS website, phone ka app) AWS ka backend
 export const BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:5000'
-    : 'https://jasmine-edition-panning.ngrok-free.dev');
+  'https://jasmine-edition-panning.ngrok-free.dev';
 
 async function request<T>(path: string, options?: RequestInit, withAuth = true): Promise<T> {
   const token = withAuth ? getToken() : null;
@@ -103,7 +100,7 @@ export const getShifts = () => request<Shift[]>('/api/shifts');
 // ---- Attendance ----
 export const getAttendance = (date?: string) =>
   request<AttendanceRecord[]>(`/api/attendance${date ? `?date=${date}` : ''}`);
-// Ek mahine (YYYY-MM) ke saare employees ke records — monthly report ke liye
+// Ek mahine (YYYY-MM) ke saare employees ke records â€” monthly report ke liye
 export const getAttendanceMonthApi = (month: string) =>
   request<AttendanceRecord[]>(`/api/attendance/monthly/${month}`);
 // Ek employee ki poori attendance history
@@ -364,3 +361,4 @@ export const getMySalarySlipLinkApi = async (slipId: string) => {
   return `${BASE_URL}${path}`;
 };
 export const fetchMySalarySlipBlob = (slipId: string) => fetchProtectedBlob(`/api/me/salary-slips/${slipId}/file`);
+

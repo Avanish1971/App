@@ -1,18 +1,27 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// APK AWS wali web ko kholega. Isliye AWS par update karne se app me update aayega.
+
 const config: CapacitorConfig = {
-  appId: 'com.geoattend.hrms',
-  appName: 'Attendance_app',
-  webDir: 'dist',
-  server: {
-    url: 'http://jasmine-edition-panning.ngrok-free.dev:3000',
-    cleartext: true,
-    androidScheme: 'http',
-  },
-  android: {
-    allowMixedContent: true,
-  },
+  
+appId: 'com.geoattend.hrms',
+  
+appName: 'Attendance_app',
+  
+webDir: 'dist',
+  
+server: {
+    
+androidScheme: 'https',
+  
+},
+  
+android: {
+    
+allowMixedContent: true,
+ 
+ },
+
 };
+
 
 export default config;

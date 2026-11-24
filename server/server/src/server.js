@@ -1,4 +1,5 @@
-require('dotenv').config();
+﻿require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./db');
@@ -30,23 +31,20 @@ const { migrate } = require('./utils/migrate');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000' }));
-// Document upload ke liye bada body chahiye (sirf us route par); baaki sab jagah chhota limit
+app.use(cors({ origin: true, credentials: true }));
 const DOC_ROUTE = /^\/api\/(employees\/[^/]+\/(documents|salary-slips|photo)|me\/client-visits|company|auth\/register)/;
 const smallJson = express.json();
 app.use((req, res, next) => (DOC_ROUTE.test(req.path) ? next() : smallJson(req, res, next)));
 
-app.get('/', (req, res) => res.json({ status: 'ok', message: 'location_app API running' }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'location_app API running' }));
 
-// Login ke bina kuch nahi: admin ke kaam sirf admin token se, employee sirf apna data.
-// Har route me `tenantScope` ke baad ka kaam sirf usi company ke data par chalta hai.
 const admin = requireRole('admin');
 app.use('/api/auth', authRouter);
-app.use('/api/slip-download', slipDownloadRouter); // 3 min ka signed link, login ke bina (token hi pehchan hai)
-app.use('/api/photos', photosRouter); // profile photo (random token wala link)
-app.use('/api/company', companyRouter); // public/logo bina login, baaki route khud guard karte hain
-app.use('/api/events', eventsRouter); // live stream (token URL me, route khud verify karta hai)
-app.use('/api/me/client-visits', requireRole('employee'), express.json({ limit: '6mb' })); // photos wala bada body
+app.use('/api/slip-download', slipDownloadRouter);
+app.use('/api/photos', photosRouter);
+app.use('/api/company', companyRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/me/client-visits', requireRole('employee'), express.json({ limit: '6mb' }));
 app.use('/api/me', requireRole('employee'), tenantScope, meRouter);
 app.use('/api/messages', admin, tenantScope, messagesRouter);
 app.use('/api/client-visits', admin, tenantScope, clientVisitsRouter);
@@ -64,12 +62,19 @@ app.use('/api/expenses', admin, tenantScope, expensesRouter);
 app.use('/api/audit-logs', admin, tenantScope, auditLogsRouter);
 app.use('/api/policy', admin, tenantScope, policyRouter);
 
+const distPath = path.join(__dirname, '../../../dist');
+app.use(express.static(distPath));
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) return res.status(404).json({ message: 'API route not found' });
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(async () => {
   await migrate().catch((err) => console.error('Migration error:', err.message));
   startSweeper();
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running at http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log("Server running on port " + PORT);
   });
 });

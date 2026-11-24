@@ -32,7 +32,7 @@ export const BASE_URL =
   import.meta.env.VITE_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:5000'
-    : 'http://54.253.216.68:5000');
+    : 'https://jasmine-edition-panning.ngrok-free.dev');
 
 async function request<T>(path: string, options?: RequestInit, withAuth = true): Promise<T> {
   const token = withAuth ? getToken() : null;

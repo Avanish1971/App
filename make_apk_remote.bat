@@ -8,7 +8,7 @@ call npx cap sync android
 if errorlevel 1 goto fail
 
 echo ==== Step 3: check karo ki APK AWS wale mode me hai ====
-findstr /C:"54.253.216.68:3000" android\app\src\main\assets\capacitor.config.json
+findstr /C:"jasmine-edition-panning.ngrok-free.dev:3000" android\app\src\main\assets\capacitor.config.json
 if errorlevel 1 (
   echo.
   echo ERROR: config me AWS ki url nahi mili.

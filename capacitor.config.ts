@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appName: 'Attendance_app',
   webDir: 'dist',
   server: {
-    url: 'http://54.253.216.68:3000',
+    url: 'http://jasmine-edition-panning.ngrok-free.dev:3000',
     cleartext: true,
     androidScheme: 'http',
   },

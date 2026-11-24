@@ -3,9 +3,7 @@
 	"appName": "Attendance_app",
 	"webDir": "dist",
 	"server": {
-		"url": "http://jasmine-edition-panning.ngrok-free.dev:3000",
-		"cleartext": true,
-		"androidScheme": "http"
+		"androidScheme": "https"
 	},
 	"android": {
 		"allowMixedContent": true

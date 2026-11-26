@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DEPARTMENTS } from '../../data/departments';
 import { Avatar } from './Avatar';
 import { OutingBadge } from './OutingBadge';
 import { Employee, AttendanceRecord, Office, Shift } from '../../types';
@@ -47,7 +48,12 @@ export function AttendanceRoster({
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
-  const departments = ['ALL', 'Engineering', 'HR', 'Finance', 'Sales', 'Operations'];
+  // Naye department list + purane employees ke wo department jo list me nahi hain
+  const departments = [
+    'ALL',
+    ...DEPARTMENTS,
+    ...Array.from(new Set(employees.map((e) => e.department).filter((d) => d && !DEPARTMENTS.includes(d)))),
+  ];
   const statuses = ['ALL', 'PRESENT', 'HALF_DAY', 'CHECKED_OUT', 'ON_BREAK', 'ON_DUTY', 'ON_LEAVE', 'ABSENT'];
 
   const filtered = employees.filter((emp) => {

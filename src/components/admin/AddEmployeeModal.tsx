@@ -1,6 +1,7 @@
 import { useBackClose } from '../../lib/backStack';
 import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
+import { DEPARTMENTS, standardShiftOptions } from '../../data/departments';
 import { PendingDocument } from '../../lib/files';
 import { FilePicker } from './FilePicker';
 import { AvatarPicker, PickedPhoto } from './AvatarPicker';
@@ -76,10 +77,12 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+91 ');
-  const [department, setDepartment] = useState('Sales');
+  const [department, setDepartment] = useState(''); // dropdown se chunna hai
   const [designation, setDesignation] = useState('');
   const [officeId, setOfficeId] = useState(offices[0]?.id || '');
-  const [shiftId, setShiftId] = useState(shifts[0]?.id || '');
+  // Sirf do shift: First (8 AM - 2 PM) aur Second (2 PM - 8 PM), baaki kuch nahi
+  const shiftOptions = standardShiftOptions(shifts);
+  const [shiftId, setShiftId] = useState(shiftOptions[0]?.id || '');
   const [reportingManager, setReportingManager] = useState('');
   const [workType, setWorkType] = useState<'IN_OFFICE' | 'FIELD_WORK'>('IN_OFFICE');
   const [joiningDate, setJoiningDate] = useState(todayISO());
@@ -140,6 +143,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
     if (!fullName.trim()) return 'Employee ka naam likho';
     if (!email.trim()) return 'Email likho';
     if (!designation.trim()) return 'Post (Designation) likho';
+    if (!department) return 'Department (विभाग) chuno';
     if (!officeId) return offices.length === 0 ? 'Pehle sidebar me "Office Locations" me apni office/branch jodo, phir employee add karo' : 'Branch chuno';
     if (!(basicMonthly > 0)) return 'Salary (Basic) 0 se zyada honi chahiye';
     if (workMode === 'TRAINING') {
@@ -308,11 +312,12 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
               <div>
                 <label className={labelCls}>विभाग (Department)</label>
                 <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls}>
-                  <option value="Sales">Sales & Business</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Operations">Operations / Field</option>
-                  <option value="HR">Human Resources</option>
-                  <option value="Finance">Finance & Accounts</option>
+                  <option value="">— विभाग चुनें —</option>
+                  {DEPARTMENTS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -328,7 +333,7 @@ export function AddEmployeeModal({ offices, shifts, employees, onAddEmployee, on
               <div>
                 <label className={labelCls}>शिफ्ट (Shift)</label>
                 <select value={shiftId} onChange={(e) => setShiftId(e.target.value)} className={inputCls}>
-                  {shifts.map((s) => (
+                  {shiftOptions.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.startTime} – {s.endTime})
                     </option>

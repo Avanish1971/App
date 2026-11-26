@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Employee = require('../models/Employee');
 const Company = require('../models/Company');
-const Shift = require('../models/Shift');
+const { ensureDefaultShifts } = require('../utils/defaultShifts');
 const { sign, safeEqual } = require('../utils/token');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { runWithTenant, runUnscoped } = require('../utils/tenant');
@@ -95,20 +95,9 @@ router.post('/register', express.json({ limit: '3mb' }), async (req, res) => {
       updatedAt: now,
     });
 
-    // Nayi company ko ek default shift do (office aur employees admin khud jodega)
-    await runWithTenant(company.id, async () =>
-      await Shift.create({
-        id: 'shift_general',
-        name: 'General Shift',
-        startTime: '10:00 AM',
-        endTime: '06:00 PM',
-        breakDurationMinutes: 60,
-        gracePeriodMinutes: 15,
-        lateThresholdMinutes: 30,
-        earlyCheckoutMinutes: 30,
-        isOvernight: false,
-      })
-    );
+    // Nayi company ko do default shift do: First (8 AM - 2 PM) aur Second (2 PM - 8 PM)
+    // (office aur employees admin khud jodega)
+    await runWithTenant(company.id, async () => await ensureDefaultShifts());
 
     signups.get(req.ip).push(Date.now());
     res.status(201).json({

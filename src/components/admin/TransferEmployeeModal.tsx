@@ -1,4 +1,5 @@
 import { useBackClose } from '../../lib/backStack';
+import { STANDARD_SHIFT_IDS, standardShiftOptions } from '../../data/departments';
 import { useState } from 'react';
 import { Employee, Office, Shift } from '../../types';
 import { ArrowRightLeft, X, Loader2, ArrowRight } from 'lucide-react';
@@ -100,7 +101,11 @@ export function TransferEmployeeModal({ employee, offices, shifts, onTransfer, o
                 <div>
                   <label className="block text-slate-700 font-medium mb-1">Shift</label>
                   <select value={shiftId} onChange={(e) => setShiftId(e.target.value)} className={inputCls}>
-                    {shifts.map((s) => (
+                    {[
+                      // Employee ki abhi ki shift purani ho to wo bhi (current) dikhegi, warna sirf do shift
+                      ...shifts.filter((s) => s.id === employee.shiftId && !STANDARD_SHIFT_IDS.includes(s.id)),
+                      ...standardShiftOptions(shifts),
+                    ].map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name}
                       </option>

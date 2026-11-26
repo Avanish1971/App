@@ -46,6 +46,7 @@ const SalarySlip = require('../models/SalarySlip');
 const EmployeePhoto = require('../models/EmployeePhoto');
 const Office = require('../models/Office');
 const Shift = require('../models/Shift');
+const { ensureDefaultShifts } = require('../utils/defaultShifts');
 const { getBalance } = require('../utils/leaveBalance');
 const { todayIST } = require('../utils/time');
 const { broadcastAdmin, sendToEmployee } = require('../utils/realtime');
@@ -80,6 +81,7 @@ router.get('/', async (req, res) => {
 // POST /api/employees - naya employee
 router.post('/', async (req, res) => {
   try {
+    await ensureDefaultShifts(); // First / Second shift company me pakki ho
     const employee = await Employee.create(req.body);
     res.status(201).json(employee);
   } catch (err) {
@@ -112,6 +114,7 @@ router.put('/:id/transfer', async (req, res) => {
     if (!newOffice) return res.status(404).json({ error: 'Naya office/branch nahi mila' });
     if (employee.officeId === newOffice.id) return res.status(400).json({ error: 'Employee pehle se isi branch me hai' });
 
+    await ensureDefaultShifts();
     if (shiftId && !(await Shift.findOne({ id: shiftId }))) {
       return res.status(404).json({ error: 'Shift nahi mili' });
     }

@@ -27,10 +27,10 @@ import { getToken, clearToken, AUTH_EXPIRED_EVENT } from './auth';
 
 // Backend ka address:
 //  1) .env me VITE_API_URL ho to wahi
-//  2) site laptop par (localhost) khuli ho to laptop ka backend  (https://jasmine-edition-panning.ngrok-free.dev)
+//  2) site laptop par (localhost) khuli ho to laptop ka backend  ()
 //  3) baaki sab jagah (AWS website, phone ka app) AWS ka backend
 export const BASE_URL =
-  'https://jasmine-edition-panning.ngrok-free.dev';
+  '';
 
 async function request<T>(path: string, options?: RequestInit, withAuth = true): Promise<T> {
   const token = withAuth ? getToken() : null;

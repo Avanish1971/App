@@ -1,3 +1,4 @@
+﻿import { Avatar } from './Avatar';
 import { useState } from 'react';
 import { LeaveRequest, RegularizationRequest, ExpenseClaim } from '../../types';
 import { Check, X, Calendar, Clock, Receipt, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -78,7 +79,7 @@ export function ApprovalCenter({
           <div className="space-y-3">
             {pendingLeaves.length === 0 ? (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-xs">
-                ✓ All leave applications have been reviewed. No pending approvals in queue.
+                âœ“ All leave applications have been reviewed. No pending approvals in queue.
               </div>
             ) : (
               pendingLeaves.map((l) => (
@@ -88,9 +89,9 @@ export function ApprovalCenter({
                 >
                   <div className="space-y-1.5 flex-1 min-w-[260px]">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{l.employeeName}</span>
+                      <span className="inline-flex items-center gap-2"><Avatar name={l.employeeName} employeeId={l.employeeId} className="w-7 h-7 rounded-full object-cover border border-slate-300" /><span className="font-bold text-slate-900 text-sm">{l.employeeName}</span></span>
                       <span className="bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded text-[10px] font-mono">
-                        {l.leaveType} LEAVE · {l.daysCount} DAY(S)
+                        {l.leaveType} LEAVE Â· {l.daysCount} DAY(S)
                       </span>
                     </div>
                     <div className="text-slate-500">
@@ -128,7 +129,7 @@ export function ApprovalCenter({
           <div className="space-y-3">
             {pendingRegs.length === 0 ? (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-xs">
-                ✓ All attendance correction requests have been settled.
+                âœ“ All attendance correction requests have been settled.
               </div>
             ) : (
               pendingRegs.map((r) => (
@@ -138,14 +139,14 @@ export function ApprovalCenter({
                 >
                   <div className="space-y-1.5 flex-1 min-w-[260px]">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{r.employeeName}</span>
+                      <span className="inline-flex items-center gap-2"><Avatar name={r.employeeName} employeeId={r.employeeId} className="w-7 h-7 rounded-full object-cover border border-slate-300" /><span className="font-bold text-slate-900 text-sm">{r.employeeName}</span></span>
                       <span className="bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-mono">
                         PUNCH CORRECTION
                       </span>
                     </div>
                     <div className="text-slate-500">
                       Target Date: <span className="text-slate-900 font-medium">{r.date}</span> | Requested Hours:{' '}
-                      <span className="font-mono text-cyan-600">{r.requestedCheckIn} – {r.requestedCheckOut}</span>
+                      <span className="font-mono text-cyan-600">{r.requestedCheckIn} â€“ {r.requestedCheckOut}</span>
                     </div>
                     <p className="text-slate-700 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
                       "{r.reason}"
@@ -179,7 +180,7 @@ export function ApprovalCenter({
           <div className="space-y-3">
             {pendingExpenses.length === 0 ? (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-xs">
-                ✓ All expense claims processed.
+                âœ“ All expense claims processed.
               </div>
             ) : (
               pendingExpenses.map((exp) => (
@@ -189,7 +190,7 @@ export function ApprovalCenter({
                 >
                   <div className="space-y-1.5 flex-1 min-w-[260px]">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{exp.employeeName}</span>
+                      <span className="inline-flex items-center gap-2"><Avatar name={exp.employeeName} employeeId={exp.employeeId} className="w-7 h-7 rounded-full object-cover border border-slate-300" /><span className="font-bold text-slate-900 text-sm">{exp.employeeName}</span></span>
                       <span className="font-mono font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-xs">
                         {formatINR(exp.amount)}
                       </span>
@@ -197,7 +198,7 @@ export function ApprovalCenter({
                         {exp.category}
                       </span>
                     </div>
-                    <div className="text-slate-500">Date: {exp.date} · Receipt: <span className="underline text-indigo-600">{exp.receiptName}</span></div>
+                    <div className="text-slate-500">Date: {exp.date} Â· Receipt: <span className="underline text-indigo-600">{exp.receiptName}</span></div>
                     <p className="text-slate-700 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
                       "{exp.description}"
                     </p>
@@ -228,3 +229,4 @@ export function ApprovalCenter({
     </div>
   );
 }
+

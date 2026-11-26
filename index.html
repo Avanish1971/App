@@ -1,8 +1,31 @@
 ﻿<!doctype html>
 <html lang="en">
   <head>
-  <script>const _f=window.fetch;window.fetch=(u,o={})=>{o.headers=Object.assign({"ngrok-skip-browser-warning":"true"},o.headers||{});return _f(u,o);};</script>
-    <meta charset="UTF-8" />
+<script>
+(function(){
+  const U = "https://jasmine-edition-panning.ngrok-free.dev";
+  const _f = window.fetch;
+  window.fetch = (u, o = {}) => {
+    o.headers = new Headers(o.headers || {});
+    o.headers.set("ngrok-skip-browser-warning", "true");
+    return _f(u, o);
+  };
+  const fixImg = (img) => {
+    const s = img.getAttribute("src") || "";
+    if ((s.startsWith("/api/photos/") || s.includes(U)) && !img.dataset.ngFixed) {
+      img.dataset.ngFixed = "1";
+      const full = s.startsWith("http") ? s : U + s;
+      _f(full, { headers: { "ngrok-skip-browser-warning": "true" } })
+        .then(r => r.blob())
+        .then(b => { img.src = URL.createObjectURL(b); })
+        .catch(() => {});
+    }
+  };
+  new MutationObserver(() => document.querySelectorAll("img").forEach(fixImg))
+    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["src"] });
+})();
+</script>
+  <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GeoAttend HRMS - Smart Geo-Fenced Attendance & Indian Payroll</title>
     <meta name="description" content="Enterprise Geo-Fenced Automatic Attendance, Shift Management, Leave Workflow, Indian Statutory Payroll & Commercial Sales Brochure Platform." />
@@ -19,3 +42,6 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
+
+

@@ -62,12 +62,7 @@ app.use('/api/expenses', admin, tenantScope, expensesRouter);
 app.use('/api/audit-logs', admin, tenantScope, auditLogsRouter);
 app.use('/api/policy', admin, tenantScope, policyRouter);
 
-const distPath = path.join(__dirname, '../../../dist');
-app.use(express.static(distPath));
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) return res.status(404).json({ message: 'API route not found' });
-  res.sendFile(path.join(distPath, 'index.html'));
-});
+app.get('/', (req, res) => res.json({ status: 'GeoAttend API Server Online' }));
 
 const PORT = process.env.PORT || 5000;
 
@@ -78,3 +73,4 @@ connectDB().then(async () => {
     console.log("Server running on port " + PORT);
   });
 });
+

@@ -1,4 +1,5 @@
-﻿// Central place for every call to the backend (server/ folder â€” Express + MongoDB).
+﻿import { registerEmployeeAvatars } from '../components/admin/Avatar';
+// Central place for every call to the backend (server/ folder â€” Express + MongoDB).
 // Change VITE_API_URL in your .env file if the backend runs somewhere other than localhost:5000.
 
 import {
@@ -361,4 +362,5 @@ export const getMySalarySlipLinkApi = async (slipId: string) => {
   return `${BASE_URL}${path}`;
 };
 export const fetchMySalarySlipBlob = (slipId: string) => fetchProtectedBlob(`/api/me/salary-slips/${slipId}/file`);
+
 

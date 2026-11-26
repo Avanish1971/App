@@ -1,3 +1,4 @@
+﻿import { Avatar } from './Avatar';
 import { useEffect, useState } from 'react';
 import { ClientVisit } from '../../types';
 import { getClientVisitsApi } from '../../lib/api';
@@ -42,7 +43,7 @@ export function FieldVisitList({ filter, showEmployee = true }: FieldVisitListPr
     if (event === 'client-visit' || event === 'reconnected') load();
   });
 
-  if (visits === null) return <div className="text-xs text-slate-500 py-6 text-center">Loading…</div>;
+  if (visits === null) return <div className="text-xs text-slate-500 py-6 text-center">Loadingâ€¦</div>;
 
   return (
     <div className="space-y-3">
@@ -56,9 +57,9 @@ export function FieldVisitList({ filter, showEmployee = true }: FieldVisitListPr
           <div key={v.id} className="bg-white border border-slate-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2.5 text-xs">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                {showEmployee && <span className="font-bold text-slate-900 text-sm">{v.employeeName || v.employeeId}</span>}
+                {showEmployee && <span className="inline-flex items-center gap-2"><Avatar name={v.employeeName} employeeId={v.employeeId} className="w-7 h-7 rounded-full object-cover border border-slate-300" /><span className="font-bold text-slate-900 text-sm">{v.employeeName || v.employeeId}</span></span>}
                 <span className="flex items-center gap-1 text-slate-500 font-mono text-[11px]">
-                  <Clock className="w-3.5 h-3.5" /> {formatDay(v.date)} · {v.time}
+                  <Clock className="w-3.5 h-3.5" /> {formatDay(v.date)} Â· {v.time}
                 </span>
               </div>
 
@@ -96,7 +97,7 @@ export function FieldVisitList({ filter, showEmployee = true }: FieldVisitListPr
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1 font-mono">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600" /> {v.latitude.toFixed(5)}, {v.longitude.toFixed(5)}
-                  {v.accuracy ? ` (±${Math.round(v.accuracy)}m)` : ''}
+                  {v.accuracy ? ` (Â±${Math.round(v.accuracy)}m)` : ''}
                 </span>
                 <a
                   href={`https://www.google.com/maps?q=${v.latitude},${v.longitude}`}
@@ -119,3 +120,4 @@ export function FieldVisitList({ filter, showEmployee = true }: FieldVisitListPr
     </div>
   );
 }
+
